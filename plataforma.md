@@ -100,6 +100,12 @@ de negócio**. Se não dá para dizer qual métrica um trabalho move, a platafor
 mostrando que o trabalho está desalinhado — esse é o teste. A home mostra as métricas
 com tendência (sparkline).
 
+**Lagging e leading.** A métrica de negócio é a *lagging indicator*: demora a se mover
+e ninguém a move diretamente. O que se move no dia a dia são as métricas primárias dos
+lançamentos — *leading indicators* que **apontam para** uma métrica de negócio
+(`lancamento.metrica_negocio_id`). O loop inteiro é essa cadeia: começa na lagging que
+queremos melhorar e termina na mensuração de uma leading que aponta de volta para ela.
+
 **MVP → evolução.** MVP: métricas com fonte manual ou query rodada por script.
 Evolução: atualização agendada automática, decomposição em métricas de input.
 

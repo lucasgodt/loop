@@ -1,14 +1,18 @@
 import Link from "next/link";
+import { LoopStrip } from "./loop-strip";
 import {
+  altoRiscoSemTeste,
   diasDeAtraso,
   dividasDeMedicao,
   entrevistasNaSemana,
   getMetricas,
   getProduto,
+  LIMITE_WIP,
   oportunidadesEmDiscovery,
   proximasRevisoes,
   revisoesAtrasadas,
   sinaisNovos,
+  testesAbertos,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +51,7 @@ export default function Home() {
         {produto.nome} · {fmtData.format(new Date())}
       </div>
       <h1 className="display mt-1 text-5xl font-medium">O que fazer agora.</h1>
+      <LoopStrip />
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Passo 3 do loop: cadência de entrevistas */}
@@ -111,9 +116,11 @@ export default function Home() {
           </Link>
         </section>
 
-        {/* Passos 4–6 do loop: discovery em andamento */}
+        {/* Passos 4–8 do loop: discovery em andamento */}
         <section className="card md:col-span-3 lg:col-span-1">
-          <div className="lbl">Em discovery</div>
+          <div className="lbl">
+            Em discovery · {discovery.length}/{LIMITE_WIP}
+          </div>
           {discovery.length === 0 ? (
             <p className="mt-1 text-sm text-muted">
               Nenhuma oportunidade em discovery. Suba um sinal ou uma entrevista para a
@@ -121,37 +128,48 @@ export default function Home() {
             </p>
           ) : (
             <ul className="mt-1 space-y-3">
-              {discovery.map((o) => (
-                <li key={o.id}>
-                  <div className="text-sm font-semibold">{o.titulo}</div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    <span
-                      className={`badge ${
-                        o.solucoes >= 3
-                          ? "bg-accent-soft text-accent"
-                          : "bg-warn-soft text-warn"
-                      }`}
+              {discovery.map((o) => {
+                const arriscadas = altoRiscoSemTeste(o.id);
+                const abertos = testesAbertos(o.id);
+                return (
+                  <li key={o.id}>
+                    <Link
+                      href={`/oportunidades/${o.id}`}
+                      className="text-sm font-semibold hover:text-accent"
                     >
-                      soluções {o.solucoes}/3
-                    </span>
-                    <span
-                      className={`badge ${
-                        o.evidencias > 0
-                          ? "bg-accent-soft text-accent"
-                          : "bg-danger-soft text-danger"
-                      }`}
-                    >
-                      {o.evidencias > 0
-                        ? `${o.evidencias} evidência${o.evidencias > 1 ? "s" : ""}`
-                        : "sem evidência"}
-                    </span>
-                  </div>
-                </li>
-              ))}
+                      {o.titulo}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <span
+                        className={`badge ${
+                          o.solucoes >= 3
+                            ? "bg-accent-soft text-accent"
+                            : "bg-warn-soft text-warn"
+                        }`}
+                      >
+                        soluções {o.solucoes}/3
+                      </span>
+                      {o.evidencias === 0 && (
+                        <span className="badge bg-danger-soft text-danger">sem evidência</span>
+                      )}
+                      {arriscadas > 0 && (
+                        <span className="badge bg-danger-soft text-danger">
+                          {arriscadas} risco{arriscadas > 1 ? "s" : ""} sem teste
+                        </span>
+                      )}
+                      {abertos > 0 && (
+                        <span className="badge bg-warn-soft text-warn">
+                          {abertos} teste{abertos > 1 ? "s" : ""} em aberto
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
-          <Link href="/oportunidades" className="btn-ghost mt-3">
-            Abrir árvore
+          <Link href="/priorizacao" className="btn-ghost mt-3">
+            Priorização
           </Link>
         </section>
 

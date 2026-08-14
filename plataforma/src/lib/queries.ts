@@ -266,3 +266,211 @@ export function diasDeAtraso(dataPrevista: string): number {
   const hoje = new Date(`${hojeLocal()}T00:00:00`);
   return Math.round((hoje.getTime() - prevista.getTime()) / 86_400_000);
 }
+
+// ── Fase 2: priorização, story map, suposições e testes ──────────────────────
+
+/** Máximo de oportunidades em discovery ao mesmo tempo (PM solo). */
+export const LIMITE_WIP = 2;
+
+export interface Avaliacao {
+  oportunidade_id: number;
+  tamanho: number | null;
+  tamanho_justif: string;
+  companhia: number | null;
+  companhia_justif: string;
+  mercado: number | null;
+  mercado_justif: string;
+  cliente: number | null;
+  cliente_justif: string;
+  decisao: string;
+  atualizada_em: string | null;
+}
+
+export function getAvaliacao(oportunidadeId: number): Avaliacao | null {
+  return (
+    (db
+      .prepare("SELECT * FROM avaliacao_oportunidade WHERE oportunidade_id = ?")
+      .get(oportunidadeId) as Avaliacao) ?? null
+  );
+}
+
+export function avaliacaoCompleta(a: Avaliacao | null): boolean {
+  return !!a && !!a.tamanho && !!a.companhia && !!a.mercado && !!a.cliente;
+}
+
+export function scoreTotal(a: Avaliacao | null): number | null {
+  if (!avaliacaoCompleta(a) || !a) return null;
+  return (a.tamanho ?? 0) + (a.companhia ?? 0) + (a.mercado ?? 0) + (a.cliente ?? 0);
+}
+
+export function getOportunidade(id: number): Oportunidade | null {
+  return (
+    (db.prepare(`${OPORTUNIDADE_SELECT} WHERE o.id = ?`).get(id) as Oportunidade) ?? null
+  );
+}
+
+/** Candidatas à priorização: tudo que ainda não entrou (nem saiu) do discovery. */
+export function paraPriorizar(produtoId: number): (Oportunidade & { aval: Avaliacao | null })[] {
+  const os = db
+    .prepare(
+      `${OPORTUNIDADE_SELECT} WHERE o.produto_id = ? AND o.estado IN ('identificada', 'priorizada') ORDER BY o.id`
+    )
+    .all(produtoId) as Oportunidade[];
+  return os
+    .map((o) => ({ ...o, aval: getAvaliacao(o.id) }))
+    .sort((a, b) => (scoreTotal(b.aval) ?? -1) - (scoreTotal(a.aval) ?? -1));
+}
+
+export function countEmDiscovery(produtoId: number): number {
+  const row = db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM oportunidade WHERE produto_id = ? AND estado = 'em_discovery'"
+    )
+    .get(produtoId) as { n: number };
+  return row.n;
+}
+
+export interface Evidencia {
+  id: number;
+  tipo: "entrevista" | "sinal";
+  descricao: string;
+  data: string;
+}
+
+export function getEvidencias(oportunidadeId: number): Evidencia[] {
+  return db
+    .prepare(
+      `SELECT ev.id,
+              CASE WHEN ev.entrevista_id IS NOT NULL THEN 'entrevista' ELSE 'sinal' END AS tipo,
+              COALESCE(e.entrevistado, s.canal || ' — ' || s.conteudo) AS descricao,
+              COALESCE(e.data, s.data) AS data
+       FROM evidencia ev
+       LEFT JOIN entrevista e ON e.id = ev.entrevista_id
+       LEFT JOIN sinal s ON s.id = ev.sinal_id
+       WHERE ev.oportunidade_id = ? ORDER BY ev.id`
+    )
+    .all(oportunidadeId) as Evidencia[];
+}
+
+export interface SolucaoDetalhe extends Solucao {
+  produto_id: number;
+  oportunidade_titulo: string | null;
+  solucoes_irmas: number;
+}
+
+export function getSolucao(id: number): SolucaoDetalhe | null {
+  return (
+    (db
+      .prepare(
+        `SELECT s.id, s.oportunidade_id, s.titulo, s.descricao, s.estado, s.link_externo, s.produto_id,
+                o.titulo AS oportunidade_titulo,
+                (SELECT COUNT(*) FROM solucao s2 WHERE s2.oportunidade_id = s.oportunidade_id) AS solucoes_irmas
+         FROM solucao s LEFT JOIN oportunidade o ON o.id = s.oportunidade_id
+         WHERE s.id = ?`
+      )
+      .get(id) as SolucaoDetalhe) ?? null
+  );
+}
+
+export interface PassoStoryMap {
+  id: number;
+  ordem: number;
+  titulo: string;
+}
+
+export function getPassosStoryMap(solucaoId: number): PassoStoryMap[] {
+  return db
+    .prepare("SELECT id, ordem, titulo FROM passo_story_map WHERE solucao_id = ? ORDER BY ordem, id")
+    .all(solucaoId) as PassoStoryMap[];
+}
+
+export interface Suposicao {
+  id: number;
+  solucao_id: number;
+  texto: string;
+  lente: string;
+  passo_story_map_id: number | null;
+  passo_titulo: string | null;
+  importancia: number;
+  evidencia: number;
+  estado: string;
+}
+
+/** Prioriza sem piedade: importante e sem evidência primeiro. */
+export function riscoDaSuposicao(s: Suposicao): number {
+  return s.importancia * (6 - s.evidencia);
+}
+
+export function altoRisco(s: Suposicao): boolean {
+  return s.importancia >= 4 && s.evidencia <= 2;
+}
+
+export function getSuposicoes(solucaoId: number): Suposicao[] {
+  const linhas = db
+    .prepare(
+      `SELECT su.id, su.solucao_id, su.texto, su.lente, su.passo_story_map_id,
+              psm.titulo AS passo_titulo, su.importancia, su.evidencia, su.estado
+       FROM suposicao su
+       LEFT JOIN passo_story_map psm ON psm.id = su.passo_story_map_id
+       WHERE su.solucao_id = ?`
+    )
+    .all(solucaoId) as Suposicao[];
+  return linhas.sort((a, b) => riscoDaSuposicao(b) - riscoDaSuposicao(a));
+}
+
+export interface Teste {
+  id: number;
+  suposicao_id: number;
+  metodo: string;
+  criterio: string;
+  resultado: string;
+  veredito: string | null;
+  aprendizado: string;
+  criada_em: string;
+  concluido_em: string | null;
+}
+
+export function getTestes(suposicaoId: number): Teste[] {
+  return db
+    .prepare("SELECT * FROM teste_suposicao WHERE suposicao_id = ? ORDER BY id")
+    .all(suposicaoId) as Teste[];
+}
+
+/** Suposições de alto risco ainda sem teste, em todas as soluções da oportunidade. */
+export function altoRiscoSemTeste(oportunidadeId: number): number {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM suposicao su
+       JOIN solucao s ON s.id = su.solucao_id
+       WHERE s.oportunidade_id = ? AND su.estado = 'mapeada'
+         AND su.importancia >= 4 AND su.evidencia <= 2`
+    )
+    .get(oportunidadeId) as { n: number };
+  return row.n;
+}
+
+export function testesAbertos(oportunidadeId: number): number {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM teste_suposicao t
+       JOIN suposicao su ON su.id = t.suposicao_id
+       JOIN solucao s ON s.id = su.solucao_id
+       WHERE s.oportunidade_id = ? AND t.veredito IS NULL`
+    )
+    .get(oportunidadeId) as { n: number };
+  return row.n;
+}
+
+/** Leading indicators apontando para uma métrica de negócio (lagging). */
+export function lancamentosDaMetrica(metricaId: number): Lancamento[] {
+  return db
+    .prepare("SELECT * FROM lancamento WHERE metrica_negocio_id = ? ORDER BY id")
+    .all(metricaId) as Lancamento[];
+}
+
+export function lancamentoDaSolucao(solucaoId: number): Lancamento | null {
+  return (
+    (db.prepare("SELECT * FROM lancamento WHERE solucao_id = ?").get(solucaoId) as Lancamento) ??
+    null
+  );
+}

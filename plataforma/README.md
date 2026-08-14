@@ -21,17 +21,23 @@ npm run dev    # http://localhost:3000 (ou próxima porta livre)
 - SQLite via better-sqlite3 — banco local em `data/plataforma.db` (fora do git)
 - Sem autenticação: ferramenta pessoal, roda local
 
-## Mapa (fase 1)
+## Mapa (fases 1 e 2)
 
 | Rota | Passo do loop |
 |---|---|
-| `/` | A home "o que fazer agora" — streak de entrevistas, inbox, bloqueios, revisões |
-| `/metricas` | 1 · Métricas de negócio |
+| `/` | A home "o que fazer agora" — régua do loop, streak, inbox, bloqueios, revisões |
+| `/metricas` | 1 · Métricas de negócio (lagging) + leading apontando para elas |
 | `/oportunidades` | 2 e 4 · Jornada + árvore de oportunidades |
+| `/oportunidades/[id]` | 5 e 6 · Avaliação (4 critérios), evidências, ideação |
 | `/entrevistas` | 3 · Entrevistas semanais (story-based) |
 | `/sinais` | 3 · Inbox de sinais (CS, gravações, conversas) |
-| `/lancamentos` | 10 · Fichas de lançamento, revisões 30/60/90, veredito |
+| `/priorizacao` | 5 · Comparação lado a lado + limite de WIP (2 em discovery) |
+| `/solucoes/[id]` | 7 e 8 · Story map, suposições (5 lentes) e testes |
+| `/lancamentos` | 9 e 10 · Fichas de lançamento, revisões 30/60/90, veredito |
 
-Fase 2 (a construir): priorização com 4 critérios e limite de WIP · bloqueio de 3+
-soluções · suposições (5 lentes) · testes de suposição. Fase 3: automação (queries
-agendadas, Linear, IA assistiva).
+Os portões do funil são regra do sistema, não disciplina: discovery exige avaliação
+completa e vaga no WIP; suposições exigem 3+ soluções na oportunidade; teste exige
+critério de sucesso definido antes; solução só é "lançada" com ficha criada.
+
+Fase 3 (a construir): automação (queries agendadas na fonte do produto, Linear,
+transcrição de gravações, IA assistiva) e múltiplos produtos.

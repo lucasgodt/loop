@@ -26,7 +26,9 @@ function No({ o, filhos, produtoId }: { o: Oportunidade; filhos: Map<number, Opo
     <li className="mt-2">
       <div className="card py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-semibold">{o.titulo}</span>
+          <Link href={`/oportunidades/${o.id}`} className="text-sm font-semibold hover:text-accent">
+            {o.titulo}
+          </Link>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className={`badge ${TOM_ESTADO[o.estado] ?? "bg-line/60 text-muted"}`}>
               {o.estado.replace("_", " ")}
@@ -45,6 +47,7 @@ function No({ o, filhos, produtoId }: { o: Oportunidade; filhos: Map<number, Opo
             )}
             <form action={mudarEstadoOportunidade} className="flex items-center gap-1">
               <input type="hidden" name="id" value={o.id} />
+              <input type="hidden" name="origem" value="/oportunidades" />
               <select name="estado" defaultValue={o.estado} className="field w-auto py-1 text-xs">
                 {ESTADOS.map((e) => (
                   <option key={e} value={e}>{e.replace("_", " ")}</option>
@@ -84,7 +87,12 @@ function No({ o, filhos, produtoId }: { o: Oportunidade; filhos: Map<number, Opo
   );
 }
 
-export default function Oportunidades() {
+export default async function Oportunidades({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string; op?: string }>;
+}) {
+  const { erro, op } = await searchParams;
   const produto = getProduto();
   if (!produto) return null;
   const oportunidades = getOportunidades(produto.id);
@@ -115,6 +123,24 @@ export default function Oportunidades() {
         Necessidades, dores e desejos — na voz de quem vive. Regra de ouro: oportunidade
         sem evidência é palpite.
       </p>
+
+      {erro === "wip" && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
+          Limite de WIP atingido — resolva ou arquive uma oportunidade em discovery antes
+          de puxar a próxima. <Link href="/priorizacao" className="font-semibold text-danger underline">Ver priorização →</Link>
+        </div>
+      )}
+      {erro === "avaliacao" && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
+          Antes de entrar em discovery, a oportunidade precisa da avaliação nos 4
+          critérios.{" "}
+          {op && (
+            <Link href={`/oportunidades/${op}`} className="font-semibold text-danger underline">
+              Avaliar agora →
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="mt-4">
         <Link href="/oportunidades/nova" className="btn">Nova oportunidade</Link>

@@ -132,6 +132,57 @@ CREATE TABLE IF NOT EXISTS revisao (
   valor_observado TEXT NOT NULL DEFAULT '',
   notas TEXT NOT NULL DEFAULT ''
 );
+
+-- Passo 5 do loop: os 4 grupos de critérios do board (notas 1–5 + justificativa)
+CREATE TABLE IF NOT EXISTS avaliacao_oportunidade (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  oportunidade_id INTEGER NOT NULL UNIQUE REFERENCES oportunidade(id),
+  tamanho INTEGER,
+  tamanho_justif TEXT NOT NULL DEFAULT '',
+  companhia INTEGER,
+  companhia_justif TEXT NOT NULL DEFAULT '',
+  mercado INTEGER,
+  mercado_justif TEXT NOT NULL DEFAULT '',
+  cliente INTEGER,
+  cliente_justif TEXT NOT NULL DEFAULT '',
+  decisao TEXT NOT NULL DEFAULT '',
+  atualizada_em TEXT
+);
+
+-- Passo 7 do loop: o que o cliente TEM que fazer para obter valor da solução
+CREATE TABLE IF NOT EXISTS passo_story_map (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  solucao_id INTEGER NOT NULL REFERENCES solucao(id),
+  ordem INTEGER NOT NULL DEFAULT 0,
+  titulo TEXT NOT NULL
+);
+
+-- lente: desejavel | viavel | factivel | usavel | etica
+-- estado: mapeada | em_teste | validada | refutada
+CREATE TABLE IF NOT EXISTS suposicao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  solucao_id INTEGER NOT NULL REFERENCES solucao(id),
+  texto TEXT NOT NULL,
+  lente TEXT NOT NULL,
+  passo_story_map_id INTEGER REFERENCES passo_story_map(id),
+  importancia INTEGER NOT NULL DEFAULT 3,
+  evidencia INTEGER NOT NULL DEFAULT 3,
+  estado TEXT NOT NULL DEFAULT 'mapeada',
+  criada_em TEXT NOT NULL
+);
+
+-- Passo 8 do loop. veredito: NULL (aberto) | validada | refutada | inconclusiva
+CREATE TABLE IF NOT EXISTS teste_suposicao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  suposicao_id INTEGER NOT NULL REFERENCES suposicao(id),
+  metodo TEXT NOT NULL DEFAULT '',
+  criterio TEXT NOT NULL,
+  resultado TEXT NOT NULL DEFAULT '',
+  veredito TEXT,
+  aprendizado TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL,
+  concluido_em TEXT
+);
 `;
 
 declare global {

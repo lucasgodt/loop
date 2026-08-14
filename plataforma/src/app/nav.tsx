@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// Na ordem do loop: métrica → escuta → árvore → priorização → mensuração.
 const ITENS = [
   { href: "/", rotulo: "Agora" },
+  { href: "/metricas", rotulo: "Métricas" },
   { href: "/entrevistas", rotulo: "Entrevistas" },
   { href: "/sinais", rotulo: "Sinais" },
   { href: "/oportunidades", rotulo: "Oportunidades" },
+  { href: "/priorizacao", rotulo: "Priorização" },
   { href: "/lancamentos", rotulo: "Lançamentos" },
-  { href: "/metricas", rotulo: "Métricas" },
 ];
 
 export function Nav() {

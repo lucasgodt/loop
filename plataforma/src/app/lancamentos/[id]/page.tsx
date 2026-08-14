@@ -50,7 +50,7 @@ export default async function FichaLancamento({
           />
         </div>
         <div>
-          <label className="lbl" htmlFor="metrica_primaria">Métrica primária (uma só)</label>
+          <label className="lbl" htmlFor="metrica_primaria">Métrica primária — leading, uma só</label>
           <input
             id="metrica_primaria"
             name="metrica_primaria"
@@ -60,7 +60,7 @@ export default async function FichaLancamento({
           />
         </div>
         <div>
-          <label className="lbl" htmlFor="metrica_negocio_id">Métrica de negócio que move</label>
+          <label className="lbl" htmlFor="metrica_negocio_id">Aponta para (lagging)</label>
           <select
             id="metrica_negocio_id"
             name="metrica_negocio_id"
