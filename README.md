@@ -38,6 +38,7 @@ ordem de construção.
 gestao_produto/
 ├── README.md                 ← este arquivo
 ├── plataforma.md             ← ★ a especificação: loop → plataforma
+├── agentes.md                ← ★ o plano da camada de agentes de IA (automação por fase)
 ├── plataforma/               ← ★ a plataforma em si ("Loop.") — Next.js + SQLite
 ├── lancamentos/              ← fichas de lançamento (semente do módulo de mensuração)
 │   ├── TEMPLATE.md
