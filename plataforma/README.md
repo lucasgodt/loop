@@ -60,4 +60,27 @@ npm run atualizar   # mede todas as métricas com fonte e imprime pendências
 # agendar: crontab -e →  0 7 * * 1  cd <pasta> && npm run atualizar
 ```
 
-A construir: Linear, transcrição de gravações, IA assistiva, múltiplos produtos.
+A construir: Linear, transcrição de gravações, múltiplos produtos.
+
+## Agentes de IA (fase 1 — ver ../agentes.md)
+
+O primeiro agente é o **Fechador de Loop**: na ficha de um lançamento sem veredito,
+o botão "🤖 Rascunhar ficha com IA" gera hipótese + métrica primária + meta +
+guardrails + a consulta na fonte plugada — **testada com dry-run real** e com a
+baseline medida na janela pré-lançamento. Tudo vira uma sugestão aprovável
+(aceitar/rejeitar); aceitar preenche a ficha, que continua 100% editável.
+
+Para habilitar, crie `.env.local` na raiz da plataforma:
+
+```bash
+OPENAI_API_KEY=sk-...
+# opcional (default: gpt-5.1)
+OPENAI_MODEL=gpt-5.1
+```
+
+Sem chave, tudo continua funcionando manualmente. Antes de rascunhar fichas com
+SQL, preencha o **contexto de dados do produto** em `/fontes` (tabelas, joins,
+regras, confounders) — sem ele o agente se recusa a inventar schema. Arquitetura:
+contrato plugável em `src/lib/agentes/` (espelho de `src/lib/fontes/`), prompts
+versionados em `src/lib/agentes/prompts/`, sugestões auditadas nas tabelas
+`sugestao`/`execucao_agente`.

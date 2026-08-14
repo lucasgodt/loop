@@ -664,6 +664,82 @@ export async function gerarRevisoes(fd: FormData) {
   revalidatePath(`/lancamentos/${id}`);
 }
 
+// ── Agentes de IA ────────────────────────────────────────────────────────────
+
+export async function atualizarContextoProduto(fd: FormData) {
+  db.prepare("UPDATE produto SET contexto = ? WHERE id = ?").run(
+    texto(fd, "contexto"),
+    Number(fd.get("id"))
+  );
+  revalidatePath("/fontes");
+}
+
+/** Botão "Rascunhar ficha com IA" na página do lançamento. */
+export async function rascunharFicha(fd: FormData) {
+  const lancamentoId = Number(fd.get("id"));
+  const produtoId = Number(fd.get("produto_id"));
+  const { executarAgente } = await import("@/lib/agentes/executar");
+  try {
+    await executarAgente("fechador_de_loop", produtoId, "manual", lancamentoId);
+  } catch (e) {
+    redirect(
+      `/lancamentos/${lancamentoId}?erro=` +
+        encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  tudoMudou();
+  revalidatePath(`/lancamentos/${lancamentoId}`);
+}
+
+/** Aceitar aplica o payload pelas mesmas mutações do fluxo manual. */
+export async function aceitarSugestao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const sugestao = db.prepare("SELECT * FROM sugestao WHERE id = ?").get(id) as
+    | { tipo: string; alvo_id: number | null; payload: string; estado: string }
+    | undefined;
+  if (!sugestao || sugestao.estado !== "sugerida") return;
+
+  if (sugestao.tipo === "rascunhar_ficha" && sugestao.alvo_id) {
+    const p = JSON.parse(sugestao.payload) as Record<string, unknown>;
+    // Mesmos campos que atualizarLancamento preenche — a ficha continua 100%
+    // editável depois; campos vazios do rascunho não apagam o que já existe.
+    const atual = db
+      .prepare("SELECT * FROM lancamento WHERE id = ?")
+      .get(sugestao.alvo_id) as Record<string, unknown>;
+    const valor = (campo: string) =>
+      typeof p[campo] === "string" && (p[campo] as string).trim() !== ""
+        ? p[campo]
+        : atual[campo];
+    db.prepare(
+      `UPDATE lancamento SET hipotese = ?, metrica_primaria = ?, metrica_negocio_id = ?,
+         baseline = ?, meta = ?, guardrails = ?, fonte_dados_id = ?, consulta = ?
+       WHERE id = ?`
+    ).run(
+      valor("hipotese"),
+      valor("metrica_primaria"),
+      p.metrica_negocio_id ?? atual.metrica_negocio_id,
+      valor("baseline"),
+      valor("meta"),
+      valor("guardrails"),
+      p.fonte_dados_id ?? atual.fonte_dados_id,
+      valor("consulta"),
+      sugestao.alvo_id
+    );
+    db.prepare(
+      "UPDATE sugestao SET estado = 'aceita', aplicada_em = ? WHERE id = ?"
+    ).run(agora(), id);
+    tudoMudou();
+    revalidatePath(`/lancamentos/${sugestao.alvo_id}`);
+  }
+}
+
+export async function rejeitarSugestao(fd: FormData) {
+  db.prepare(
+    "UPDATE sugestao SET estado = 'rejeitada', motivo_rejeicao = ? WHERE id = ? AND estado = 'sugerida'"
+  ).run(texto(fd, "motivo"), Number(fd.get("id")));
+  tudoMudou();
+}
+
 // ── Fase 3: fontes de dados plugáveis e medição automática ───────────────────
 
 export async function criarFonte(fd: FormData) {

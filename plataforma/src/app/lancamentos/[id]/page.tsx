@@ -1,13 +1,19 @@
 import { notFound } from "next/navigation";
 import {
+  aceitarSugestao,
   apagarLancamento,
   apagarRevisao,
   atualizarLancamento,
   gerarRevisoes,
   medirRevisao,
+  rascunharFicha,
   registrarRevisao,
+  rejeitarSugestao,
 } from "@/app/actions";
 import { Apagar } from "@/app/ui";
+import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
+import type { PayloadFicha } from "@/lib/agentes/fechador-de-loop";
+import { sugestaoPendentePara } from "@/lib/queries";
 import {
   diasDeAtraso,
   getFontes,
@@ -48,9 +54,11 @@ export default async function FichaLancamento({
 
       {erro && (
         <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
-          Falha na medição: {erro}
+          Falha: {erro}
         </div>
       )}
+
+      <RascunhoDoAgente lancamentoId={lancamento.id} produtoId={produto.id} temVeredito={!!lancamento.veredito} />
 
       <form action={atualizarLancamento} className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={lancamento.id} />
@@ -258,6 +266,120 @@ export default async function FichaLancamento({
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Bloco do Fechador de Loop: botão de rascunhar + card da sugestão pendente. */
+function RascunhoDoAgente({
+  lancamentoId,
+  produtoId,
+  temVeredito,
+}: {
+  lancamentoId: number;
+  produtoId: number;
+  temVeredito: boolean;
+}) {
+  if (temVeredito) return null;
+  const sugestao = sugestaoPendentePara("lancamento", lancamentoId);
+
+  if (!sugestao) {
+    if (!temChaveDeIA()) {
+      return (
+        <p className="mt-4 text-xs text-muted">
+          🤖 O Fechador de Loop pode rascunhar esta ficha (hipótese, métrica, SQL com
+          dry-run, baseline) — configure <code className="font-mono">OPENAI_API_KEY</code>{" "}
+          no .env.local da plataforma para habilitar.
+        </p>
+      );
+    }
+    return (
+      <form action={rascunharFicha} className="mt-4">
+        <input type="hidden" name="id" value={lancamentoId} />
+        <input type="hidden" name="produto_id" value={produtoId} />
+        <button className="btn" type="submit">
+          🤖 Rascunhar ficha com IA
+        </button>
+        <span className="ml-2 text-xs text-muted">
+          hipótese + métrica primária + SQL testado + baseline medida — você aprova campo a campo
+        </span>
+      </form>
+    );
+  }
+
+  const p = JSON.parse(sugestao.payload) as PayloadFicha;
+  return (
+    <div className="card mt-4 border-accent">
+      <div className="flex items-center justify-between gap-2">
+        <div className="lbl">🤖 Rascunho do Fechador de Loop</div>
+        <span className="font-mono text-[10px] text-muted">{sugestao.criada_em.slice(0, 16).replace("T", " ")}</span>
+      </div>
+      <dl className="mt-2 space-y-2 text-sm">
+        {p.hipotese && (
+          <div><dt className="lbl">Hipótese</dt><dd>{p.hipotese}</dd></div>
+        )}
+        {p.metrica_primaria && (
+          <div><dt className="lbl">Métrica primária (leading)</dt><dd>{p.metrica_primaria}</dd></div>
+        )}
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          {p.baseline && (
+            <div><dt className="lbl">Baseline</dt><dd className="font-mono text-xs">{p.baseline}</dd></div>
+          )}
+          {p.meta && (
+            <div><dt className="lbl">Meta</dt><dd>{p.meta}</dd></div>
+          )}
+          {p.guardrails && (
+            <div><dt className="lbl">Guardrails</dt><dd>{p.guardrails}</dd></div>
+          )}
+        </div>
+        {p.consulta && (
+          <div>
+            <dt className="lbl">Consulta proposta</dt>
+            <dd className="overflow-x-auto rounded-lg bg-line/30 p-2 font-mono text-xs whitespace-pre-wrap">{p.consulta}</dd>
+            {p.dry_run ? (
+              <dd className="mt-1 font-mono text-xs text-accent">
+                ✓ dry-run: {p.dry_run.valor} ({p.dry_run.detalhe})
+              </dd>
+            ) : p.dry_run_erro ? (
+              <dd className="mt-1 font-mono text-xs text-danger">
+                ✗ dry-run falhou: {p.dry_run_erro} — revise a consulta antes de aceitar
+              </dd>
+            ) : null}
+          </div>
+        )}
+        {p.consulta_baseline && (
+          <div>
+            <dt className="lbl">Consulta da baseline</dt>
+            <dd className="overflow-x-auto rounded-lg bg-line/30 p-2 font-mono text-xs whitespace-pre-wrap">{p.consulta_baseline}</dd>
+            {p.baseline_medida && (
+              <dd className="mt-1 font-mono text-xs text-accent">
+                ✓ medida: {p.baseline_medida.valor} ({p.baseline_medida.detalhe})
+              </dd>
+            )}
+            {p.baseline_erro && (
+              <dd className="mt-1 font-mono text-xs text-danger">✗ {p.baseline_erro}</dd>
+            )}
+          </div>
+        )}
+        {p.justificativa && (
+          <div><dt className="lbl">Justificativa</dt><dd className="text-muted">{p.justificativa}</dd></div>
+        )}
+      </dl>
+      <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+        <form action={aceitarSugestao}>
+          <input type="hidden" name="id" value={sugestao.id} />
+          <button className="btn" type="submit">Aceitar — preencher a ficha</button>
+        </form>
+        <details>
+          <summary className="cursor-pointer font-mono text-xs text-muted hover:text-danger">rejeitar</summary>
+          <form action={rejeitarSugestao} className="mt-2 flex gap-2">
+            <input type="hidden" name="id" value={sugestao.id} />
+            <input name="motivo" className="field w-64 py-1 text-xs" placeholder="motivo (melhora o prompt)" />
+            <button className="btn-ghost py-1 text-xs" type="submit">confirmar</button>
+          </form>
+        </details>
+        <span className="ml-auto text-xs text-muted">os campos continuam editáveis depois de aceitar</span>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { apagarFonte, atualizarFonte, criarFonte } from "@/app/actions";
+import { apagarFonte, atualizarContextoProduto, atualizarFonte, criarFonte } from "@/app/actions";
 import { Apagar, Editar } from "@/app/ui";
 import { PROVEDORES } from "@/lib/fontes";
 import { getFontes, getProduto, usosDaFonte } from "@/lib/queries";
@@ -128,6 +128,31 @@ export default async function Fontes({
           provedor nativo <code className="font-mono">bigquery.ts</code> entra no
           registro sem tocar em mais nada.
         </p>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="lbl">Contexto de dados do produto (para os agentes)</h2>
+        <form action={atualizarContextoProduto} className="card">
+          <input type="hidden" name="id" value={produto.id} />
+          <p className="mb-2 text-sm text-muted">
+            O que um agente precisa saber para escrever consultas nesta fonte:
+            tabelas e campos relevantes, joins, regras de higiene dos dados e
+            confounders (ex.: sazonalidade escolar). Sem isso, o Fechador de Loop se
+            recusa a inventar SQL — configuração do workspace, nunca hardcode.
+          </p>
+          <textarea
+            name="contexto"
+            rows={10}
+            defaultValue={produto.contexto}
+            className="field font-mono text-xs"
+            placeholder={
+              "ex.:\nDataset: mooney-db39f.analytics\n- tabela alunos (aluno_id, escola_id, criado_em)\n- tabela sessoes (aluno_id, iniciada_em, ...)\nJoins: sessoes.aluno_id = alunos.aluno_id\nRegras: excluir escolas de teste (escola_id IN (...))\nConfounders: férias escolares em julho e dezembro/janeiro"
+            }
+          />
+          <div className="mt-2 flex justify-end">
+            <button className="btn-ghost" type="submit">Salvar contexto</button>
+          </div>
+        </form>
       </section>
     </div>
   );

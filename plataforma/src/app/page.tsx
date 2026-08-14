@@ -12,6 +12,7 @@ import {
   proximasRevisoes,
   revisoesAtrasadas,
   sinaisNovos,
+  sugestoesPendentes,
   testesAbertos,
 } from "@/lib/queries";
 
@@ -43,6 +44,7 @@ export default function Home() {
   const atrasadas = revisoesAtrasadas(produto.id);
   const proximas = proximasRevisoes(produto.id);
   const metricas = getMetricas(produto.id);
+  const sugestoes = sugestoesPendentes(produto.id);
   const metaSemanal = 1;
 
   return (
@@ -52,6 +54,24 @@ export default function Home() {
       </div>
       <h1 className="display mt-1 text-5xl font-medium">O que fazer agora.</h1>
       <LoopStrip />
+
+      {sugestoes.length > 0 && (
+        <div className="card mt-6 border-accent">
+          <div className="lbl">🤖 Sugestões do agente aguardando: {sugestoes.length}</div>
+          <ul className="mt-1 space-y-1">
+            {sugestoes.map((s) => (
+              <li key={s.id} className="text-sm">
+                <Link
+                  href={s.alvo_tabela === "lancamento" && s.alvo_id ? `/lancamentos/${s.alvo_id}` : "/"}
+                  className="hover:text-accent"
+                >
+                  {s.resumo}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Passo 3 do loop: cadência de entrevistas */}

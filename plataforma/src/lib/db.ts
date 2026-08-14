@@ -194,6 +194,51 @@ CREATE TABLE IF NOT EXISTS fonte_dados (
   config TEXT NOT NULL DEFAULT '{}',
   criada_em TEXT NOT NULL
 );
+
+-- Agentes de IA (ver ../agentes.md). Cada rodada de agente fica auditada aqui.
+CREATE TABLE IF NOT EXISTS execucao_agente (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  agente_id TEXT NOT NULL,
+  gatilho TEXT NOT NULL,
+  modelo TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'ok',
+  erro TEXT NOT NULL DEFAULT '',
+  tokens_entrada INTEGER,
+  tokens_saida INTEGER,
+  iniciada_em TEXT NOT NULL,
+  concluida_em TEXT
+);
+
+-- A sugestão genérica: ação serializada apontando para qualquer entidade.
+-- estado: sugerida | aceita | editada | rejeitada | aplicada_auto | falhou
+CREATE TABLE IF NOT EXISTS sugestao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  execucao_id INTEGER NOT NULL REFERENCES execucao_agente(id),
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  tipo TEXT NOT NULL,
+  alvo_tabela TEXT NOT NULL,
+  alvo_id INTEGER,
+  payload TEXT NOT NULL,
+  resumo TEXT NOT NULL,
+  insumos TEXT NOT NULL DEFAULT '[]',
+  estado TEXT NOT NULL DEFAULT 'sugerida',
+  motivo_rejeicao TEXT NOT NULL DEFAULT '',
+  entidade_criada_id INTEGER,
+  aplicada_em TEXT,
+  criada_em TEXT NOT NULL
+);
+
+-- O dial de autonomia por agente. modo: desligado | sugere | automatico
+CREATE TABLE IF NOT EXISTS agente_config (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  agente_id TEXT NOT NULL,
+  modo TEXT NOT NULL DEFAULT 'sugere',
+  modelo TEXT NOT NULL DEFAULT '',
+  config TEXT NOT NULL DEFAULT '{}',
+  UNIQUE (produto_id, agente_id)
+);
 `;
 
 // Migrações aditivas: colunas novas em tabelas que já existem em bancos criados
@@ -203,6 +248,9 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   ["metrica_negocio", "consulta TEXT NOT NULL DEFAULT ''"],
   ["lancamento", "fonte_dados_id INTEGER REFERENCES fonte_dados(id)"],
   ["lancamento", "consulta TEXT NOT NULL DEFAULT ''"],
+  // contexto de dados do produto (schema do warehouse, joins, confounders) —
+  // insumo dos agentes para escrever consultas; configuração, nunca hardcode
+  ["produto", "contexto TEXT NOT NULL DEFAULT ''"],
 ];
 
 declare global {

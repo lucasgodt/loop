@@ -4,6 +4,7 @@ export interface Produto {
   id: number;
   nome: string;
   descricao: string;
+  contexto: string;
 }
 
 export interface Persona {
@@ -503,6 +504,39 @@ export function getFonte(id: number): Fonte | null {
     (db
       .prepare("SELECT id, produto_id, nome, tipo, config FROM fonte_dados WHERE id = ?")
       .get(id) as Fonte) ?? null
+  );
+}
+
+// ── Agentes de IA: sugestões ─────────────────────────────────────────────────
+
+export interface Sugestao {
+  id: number;
+  execucao_id: number;
+  tipo: string;
+  alvo_tabela: string;
+  alvo_id: number | null;
+  payload: string;
+  resumo: string;
+  insumos: string;
+  estado: string;
+  criada_em: string;
+}
+
+export function sugestoesPendentes(produtoId: number): Sugestao[] {
+  return db
+    .prepare(
+      "SELECT * FROM sugestao WHERE produto_id = ? AND estado = 'sugerida' ORDER BY criada_em DESC"
+    )
+    .all(produtoId) as Sugestao[];
+}
+
+export function sugestaoPendentePara(alvoTabela: string, alvoId: number): Sugestao | null {
+  return (
+    (db
+      .prepare(
+        "SELECT * FROM sugestao WHERE alvo_tabela = ? AND alvo_id = ? AND estado = 'sugerida' ORDER BY id DESC LIMIT 1"
+      )
+      .get(alvoTabela, alvoId) as Sugestao) ?? null
   );
 }
 
