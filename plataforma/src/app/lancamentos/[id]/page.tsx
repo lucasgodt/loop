@@ -1,5 +1,12 @@
 import { notFound } from "next/navigation";
-import { atualizarLancamento, gerarRevisoes, registrarRevisao } from "@/app/actions";
+import {
+  apagarLancamento,
+  apagarRevisao,
+  atualizarLancamento,
+  gerarRevisoes,
+  registrarRevisao,
+} from "@/app/actions";
+import { Apagar } from "@/app/ui";
 import { diasDeAtraso, getLancamento, getMetricas, getProduto, getRevisoes } from "@/lib/queries";
 import { hojeLocal } from "@/lib/db";
 
@@ -21,6 +28,9 @@ export default async function FichaLancamento({
     <div>
       <div className="eyebrow">ficha de lançamento</div>
       <h1 className="display mt-1 text-4xl font-medium">{lancamento.nome}</h1>
+      <div className="mt-2">
+        <Apagar action={apagarLancamento} id={lancamento.id} rotulo="apagar lançamento" />
+      </div>
 
       <form action={atualizarLancamento} className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={lancamento.id} />
@@ -147,26 +157,30 @@ export default async function FichaLancamento({
                 {r.data_realizada ? (
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold">{r.rotulo}</span>
-                    <span className="font-mono text-sm">
+                    <span className="flex items-baseline gap-3 font-mono text-sm">
                       {r.valor_observado || "—"}
-                      <span className="ml-2 text-xs text-muted">em {r.data_realizada}</span>
+                      <span className="text-xs text-muted">em {r.data_realizada}</span>
+                      <Apagar action={apagarRevisao} id={r.id} />
                     </span>
                     {r.notas && <p className="w-full text-xs text-muted">{r.notas}</p>}
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold">{r.rotulo}</span>
-                      <span
-                        className={`badge ${
-                          r.data_prevista < hojeLocal()
-                            ? "bg-warn-soft text-warn"
-                            : "bg-line/60 text-muted"
-                        }`}
-                      >
-                        {r.data_prevista < hojeLocal()
-                          ? `atrasada há ${diasDeAtraso(r.data_prevista)}d`
-                          : `prevista ${r.data_prevista}`}
+                      <span className="flex items-center gap-3">
+                        <span
+                          className={`badge ${
+                            r.data_prevista < hojeLocal()
+                              ? "bg-warn-soft text-warn"
+                              : "bg-line/60 text-muted"
+                          }`}
+                        >
+                          {r.data_prevista < hojeLocal()
+                            ? `atrasada há ${diasDeAtraso(r.data_prevista)}d`
+                            : `prevista ${r.data_prevista}`}
+                        </span>
+                        <Apagar action={apagarRevisao} id={r.id} />
                       </span>
                     </div>
                     <form action={registrarRevisao} className="mt-2 flex flex-wrap items-end gap-2">

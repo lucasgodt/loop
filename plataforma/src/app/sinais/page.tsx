@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { arquivarSinal, criarSinal } from "@/app/actions";
+import { apagarSinal, arquivarSinal, atualizarSinal, criarSinal } from "@/app/actions";
+import { Apagar, Editar } from "@/app/ui";
 import { getProduto, getSinais } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export default function Sinais() {
               <span className="text-sm">{s.conteudo}</span>
               <span className="ml-2 font-mono text-xs text-muted">{s.data}</span>
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Link href={`/oportunidades/nova?sinal=${s.id}`} className="btn-ghost">
                 Promover ↗
               </Link>
@@ -66,6 +67,22 @@ export default function Sinais() {
                 <input type="hidden" name="id" value={s.id} />
                 <button className="btn-ghost text-muted" type="submit">Arquivar</button>
               </form>
+              <Apagar action={apagarSinal} id={s.id} />
+            </div>
+            <div className="w-full">
+              <Editar>
+                <form action={atualizarSinal} className="flex flex-wrap gap-2">
+                  <input type="hidden" name="id" value={s.id} />
+                  <select name="canal" defaultValue={s.canal} className="field w-auto">
+                    {[...new Set([...CANAIS, s.canal])].map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <input name="conteudo" defaultValue={s.conteudo} required className="field min-w-56 flex-1" />
+                  <input name="data" type="date" defaultValue={s.data} className="field" />
+                  <button className="btn-ghost" type="submit">Salvar</button>
+                </form>
+              </Editar>
             </div>
           </li>
         ))}
@@ -84,13 +101,16 @@ export default function Sinais() {
                   <span className="badge mr-2 bg-line/60 text-muted">{s.canal}</span>
                   <span className="text-sm">{s.conteudo}</span>
                 </div>
-                <span
-                  className={`badge shrink-0 ${
-                    s.status === "promovido" ? "bg-accent-soft text-accent" : "bg-line/60 text-muted"
-                  }`}
-                >
-                  {s.status}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`badge ${
+                      s.status === "promovido" ? "bg-accent-soft text-accent" : "bg-line/60 text-muted"
+                    }`}
+                  >
+                    {s.status}
+                  </span>
+                  <Apagar action={apagarSinal} id={s.id} />
+                </div>
               </li>
             ))}
           </ul>

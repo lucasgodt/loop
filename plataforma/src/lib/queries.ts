@@ -35,6 +35,7 @@ export interface Entrevista {
   id: number;
   data: string;
   entrevistado: string;
+  persona_id: number | null;
   persona_nome: string | null;
   link_gravacao: string;
   historia: string;
@@ -126,16 +127,18 @@ export function getMetricas(produtoId: number): Metrica[] {
     .all(produtoId) as Metrica[];
 }
 
-export function getHistoricoMetrica(metricaId: number): { valor: number; data: string }[] {
+export function getHistoricoMetrica(
+  metricaId: number
+): { id: number; valor: number; data: string }[] {
   return db
-    .prepare("SELECT valor, data FROM metrica_valor WHERE metrica_id = ? ORDER BY data")
-    .all(metricaId) as { valor: number; data: string }[];
+    .prepare("SELECT id, valor, data FROM metrica_valor WHERE metrica_id = ? ORDER BY data, id")
+    .all(metricaId) as { id: number; valor: number; data: string }[];
 }
 
 export function getEntrevistas(produtoId: number): Entrevista[] {
   return db
     .prepare(
-      `SELECT e.id, e.data, e.entrevistado, p.nome AS persona_nome, e.link_gravacao, e.historia, e.notas
+      `SELECT e.id, e.data, e.entrevistado, e.persona_id, p.nome AS persona_nome, e.link_gravacao, e.historia, e.notas
        FROM entrevista e LEFT JOIN persona p ON p.id = e.persona_id
        WHERE e.produto_id = ? ORDER BY e.data DESC, e.id DESC`
     )

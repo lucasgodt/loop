@@ -1,4 +1,5 @@
-import { criarEntrevista } from "@/app/actions";
+import { apagarEntrevista, atualizarEntrevista, criarEntrevista } from "@/app/actions";
+import { Apagar, Editar } from "@/app/ui";
 import { entrevistasNaSemana, getEntrevistas, getPersonas, getProduto } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +84,30 @@ export default function Entrevistas() {
                 gravação
               </a>
             )}
+            <div className="mt-3 flex gap-4 border-t border-line pt-2">
+              <Editar>
+                <form action={atualizarEntrevista} className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <input type="hidden" name="id" value={e.id} />
+                  <input name="entrevistado" defaultValue={e.entrevistado} required className="field" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <select name="persona_id" defaultValue={e.persona_id ?? ""} className="field">
+                      <option value="">persona…</option>
+                      {personas.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nome}</option>
+                      ))}
+                    </select>
+                    <input name="data" type="date" defaultValue={e.data} className="field" />
+                  </div>
+                  <textarea name="historia" rows={3} defaultValue={e.historia} className="field md:col-span-2" />
+                  <input name="notas" defaultValue={e.notas} className="field" />
+                  <input name="link_gravacao" defaultValue={e.link_gravacao} className="field" />
+                  <div className="md:col-span-2 flex justify-end">
+                    <button className="btn-ghost" type="submit">Salvar</button>
+                  </div>
+                </form>
+              </Editar>
+              <Apagar action={apagarEntrevista} id={e.id} />
+            </div>
           </li>
         ))}
         {entrevistas.length === 0 && (

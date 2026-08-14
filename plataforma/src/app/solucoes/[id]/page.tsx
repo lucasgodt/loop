@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  apagarPassoStoryMap,
+  apagarSolucao,
+  apagarSuposicao,
+  apagarTeste,
+  atualizarSolucao,
+  atualizarSuposicao,
   concluirTeste,
   criarPassoStoryMap,
   criarSuposicao,
   criarTeste,
   mudarEstadoSolucao,
 } from "@/app/actions";
+import { Apagar, Editar } from "@/app/ui";
 import {
   altoRisco,
   getPassosStoryMap,
@@ -90,6 +97,30 @@ export default async function DetalheSolucao({
         ) : (
           <span className="badge bg-line/60 text-muted">sem ficha de lançamento</span>
         )}
+        <Apagar action={apagarSolucao} id={s.id} />
+      </div>
+
+      <div className="mt-3">
+        <Editar rotulo="editar solução">
+          <form action={atualizarSolucao} className="card grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input type="hidden" name="id" value={s.id} />
+            <div>
+              <label className="lbl" htmlFor="e-titulo">Título</label>
+              <input id="e-titulo" name="titulo" defaultValue={s.titulo} required className="field" />
+            </div>
+            <div>
+              <label className="lbl" htmlFor="e-link">Link externo (Linear, doc…)</label>
+              <input id="e-link" name="link_externo" defaultValue={s.link_externo} className="field" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="lbl" htmlFor="e-desc">Descrição</label>
+              <textarea id="e-desc" name="descricao" rows={2} defaultValue={s.descricao} className="field" />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button className="btn-ghost" type="submit">Salvar</button>
+            </div>
+          </form>
+        </Editar>
       </div>
 
       {erro === "sem_ficha" && (
@@ -132,8 +163,11 @@ export default async function DetalheSolucao({
               {passos.length > 0 ? (
                 <ol className="mb-3 space-y-1">
                   {passos.map((p) => (
-                    <li key={p.id} className="text-sm">
-                      <span className="font-mono text-xs text-muted">{p.ordem}.</span> {p.titulo}
+                    <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span>
+                        <span className="font-mono text-xs text-muted">{p.ordem}.</span> {p.titulo}
+                      </span>
+                      <Apagar action={apagarPassoStoryMap} id={p.id} />
                     </li>
                   ))}
                 </ol>
@@ -229,6 +263,33 @@ export default async function DetalheSolucao({
                     {su.passo_titulo && (
                       <p className="mt-1 text-xs text-muted">nasce do passo: {su.passo_titulo}</p>
                     )}
+                    <div className="mt-2 flex gap-4">
+                      <Editar>
+                        <form action={atualizarSuposicao} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="id" value={su.id} />
+                          <input name="texto" defaultValue={su.texto} required className="field min-w-64 flex-1" />
+                          <select name="lente" defaultValue={su.lente} className="field w-auto">
+                            {Object.keys(LENTES).map((valor) => (
+                              <option key={valor} value={valor}>{valor}</option>
+                            ))}
+                          </select>
+                          <select name="passo_story_map_id" defaultValue={su.passo_story_map_id ?? ""} className="field w-auto">
+                            <option value="">passo…</option>
+                            {passos.map((p) => (
+                              <option key={p.id} value={p.id}>{p.ordem}. {p.titulo}</option>
+                            ))}
+                          </select>
+                          <select name="importancia" defaultValue={su.importancia} className="field w-auto">
+                            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>imp {n}</option>)}
+                          </select>
+                          <select name="evidencia" defaultValue={su.evidencia} className="field w-auto">
+                            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>evid {n}</option>)}
+                          </select>
+                          <button className="btn-ghost" type="submit">Salvar</button>
+                        </form>
+                      </Editar>
+                      <Apagar action={apagarSuposicao} id={su.id} />
+                    </div>
 
                     {testes.length > 0 && (
                       <ul className="mt-3 space-y-2 border-t border-line pt-3">
@@ -251,6 +312,9 @@ export default async function DetalheSolucao({
                             {t.aprendizado && (
                               <p className="mt-1 text-xs text-muted">aprendizado: {t.aprendizado}</p>
                             )}
+                            <div className="mt-1">
+                              <Apagar action={apagarTeste} id={t.id} rotulo="apagar teste" />
+                            </div>
                             {!t.veredito && (
                               <form action={concluirTeste} className="mt-2 flex flex-wrap items-end gap-2">
                                 <input type="hidden" name="id" value={t.id} />

@@ -1,16 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  apagarOportunidade,
+  atualizarOportunidade,
   criarSolucao,
   ligarEvidencia,
   mudarEstadoOportunidade,
+  removerEvidencia,
   salvarAvaliacao,
 } from "@/app/actions";
+import { Apagar, Editar } from "@/app/ui";
 import {
   getAvaliacao,
   getEntrevistas,
   getEvidencias,
   getOportunidade,
+  getOportunidades,
+  getPassosJornada,
+  getPersonas,
   getProduto,
   getSinais,
   getSolucoes,
@@ -79,6 +86,55 @@ export default async function DetalheOportunidade({
         {total != null && (
           <span className="badge bg-accent-soft text-accent">score {total}/20</span>
         )}
+        <Apagar action={apagarOportunidade} id={o.id} />
+      </div>
+
+      <div className="mt-3">
+        <Editar rotulo="editar oportunidade">
+          <form action={atualizarOportunidade} className="card grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input type="hidden" name="id" value={o.id} />
+            <div className="md:col-span-2">
+              <label className="lbl" htmlFor="e-titulo">Título</label>
+              <input id="e-titulo" name="titulo" defaultValue={o.titulo} required className="field" />
+            </div>
+            <div>
+              <label className="lbl" htmlFor="e-persona">Persona</label>
+              <select id="e-persona" name="persona_id" defaultValue={o.persona_id ?? ""} className="field">
+                <option value="">—</option>
+                {getPersonas(produto.id).map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl" htmlFor="e-passo">Passo da jornada</label>
+              <select id="e-passo" name="passo_jornada_id" defaultValue={o.passo_jornada_id ?? ""} className="field">
+                <option value="">—</option>
+                {getPassosJornada(produto.id).map((p) => (
+                  <option key={p.id} value={p.id}>{p.persona_nome ?? "Geral"} · {p.titulo}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl" htmlFor="e-pai">Oportunidade-mãe</label>
+              <select id="e-pai" name="pai_id" defaultValue={o.pai_id ?? ""} className="field">
+                <option value="">— raiz —</option>
+                {getOportunidades(produto.id)
+                  .filter((outra) => outra.id !== o.id)
+                  .map((outra) => (
+                    <option key={outra.id} value={outra.id}>{outra.titulo}</option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl" htmlFor="e-notas">Notas</label>
+              <input id="e-notas" name="notas" defaultValue={o.notas} className="field" />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button className="btn-ghost" type="submit">Salvar</button>
+            </div>
+          </form>
+        </Editar>
       </div>
 
       {erro === "wip" && (
@@ -90,6 +146,12 @@ export default async function DetalheOportunidade({
       {erro === "avaliacao" && (
         <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
           Preencha a avaliação abaixo (as 4 notas) antes de mover para discovery.
+        </div>
+      )}
+      {erro === "dependencias" && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
+          Esta oportunidade tem filhas na árvore ou soluções — apague-as (ou mova as
+          filhas para outra mãe) antes de apagar a oportunidade.
         </div>
       )}
 
@@ -154,10 +216,13 @@ export default async function DetalheOportunidade({
             ) : (
               <ul className="mb-3 space-y-2">
                 {evidencias.map((ev) => (
-                  <li key={ev.id} className="text-sm">
-                    <span className="badge mr-2 bg-line/60 text-muted">{ev.tipo}</span>
-                    {ev.descricao}
-                    <span className="ml-1 font-mono text-xs text-muted">{ev.data}</span>
+                  <li key={ev.id} className="flex items-start justify-between gap-2 text-sm">
+                    <span>
+                      <span className="badge mr-2 bg-line/60 text-muted">{ev.tipo}</span>
+                      {ev.descricao}
+                      <span className="ml-1 font-mono text-xs text-muted">{ev.data}</span>
+                    </span>
+                    <Apagar action={removerEvidencia} id={ev.id} rotulo="remover" />
                   </li>
                 ))}
               </ul>

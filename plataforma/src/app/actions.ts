@@ -247,6 +247,268 @@ export async function concluirTeste(fd: FormData) {
   revalidatePath(`/solucoes/${solucaoId}`);
 }
 
+// ── Edição e exclusão ────────────────────────────────────────────────────────
+// Sem ON DELETE CASCADE no schema: cada exclusão resolve as referências na
+// ordem certa, dentro de uma transação.
+
+export async function atualizarEntrevista(fd: FormData) {
+  db.prepare(
+    `UPDATE entrevista SET data = ?, entrevistado = ?, persona_id = ?, link_gravacao = ?, historia = ?, notas = ? WHERE id = ?`
+  ).run(
+    texto(fd, "data") || hojeLocal(),
+    texto(fd, "entrevistado"),
+    inteiroOuNulo(fd, "persona_id"),
+    texto(fd, "link_gravacao"),
+    texto(fd, "historia"),
+    texto(fd, "notas"),
+    Number(fd.get("id"))
+  );
+  tudoMudou();
+}
+
+export async function apagarEntrevista(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("DELETE FROM evidencia WHERE entrevista_id = ?").run(id);
+    db.prepare("DELETE FROM entrevista WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+}
+
+export async function atualizarSinal(fd: FormData) {
+  db.prepare("UPDATE sinal SET canal = ?, conteudo = ?, data = ? WHERE id = ?").run(
+    texto(fd, "canal"),
+    texto(fd, "conteudo"),
+    texto(fd, "data") || hojeLocal(),
+    Number(fd.get("id"))
+  );
+  tudoMudou();
+}
+
+export async function apagarSinal(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("DELETE FROM evidencia WHERE sinal_id = ?").run(id);
+    db.prepare("DELETE FROM sinal WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+}
+
+export async function atualizarOportunidade(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const paiId = inteiroOuNulo(fd, "pai_id");
+  db.prepare(
+    `UPDATE oportunidade SET titulo = ?, persona_id = ?, passo_jornada_id = ?, pai_id = ?, notas = ? WHERE id = ?`
+  ).run(
+    texto(fd, "titulo"),
+    inteiroOuNulo(fd, "persona_id"),
+    inteiroOuNulo(fd, "passo_jornada_id"),
+    paiId === id ? null : paiId,
+    texto(fd, "notas"),
+    id
+  );
+  tudoMudou();
+  revalidatePath(`/oportunidades/${id}`);
+}
+
+export async function apagarOportunidade(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const filhos = db
+    .prepare("SELECT COUNT(*) AS n FROM oportunidade WHERE pai_id = ?")
+    .get(id) as { n: number };
+  const solucoes = db
+    .prepare("SELECT COUNT(*) AS n FROM solucao WHERE oportunidade_id = ?")
+    .get(id) as { n: number };
+  if (filhos.n > 0 || solucoes.n > 0) {
+    redirect(`/oportunidades/${id}?erro=dependencias`);
+  }
+  db.transaction(() => {
+    db.prepare("DELETE FROM evidencia WHERE oportunidade_id = ?").run(id);
+    db.prepare("DELETE FROM avaliacao_oportunidade WHERE oportunidade_id = ?").run(id);
+    db.prepare("DELETE FROM oportunidade WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+  redirect("/oportunidades");
+}
+
+export async function removerEvidencia(fd: FormData) {
+  db.prepare("DELETE FROM evidencia WHERE id = ?").run(Number(fd.get("id")));
+  tudoMudou();
+}
+
+export async function atualizarSolucao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.prepare("UPDATE solucao SET titulo = ?, descricao = ?, link_externo = ? WHERE id = ?").run(
+    texto(fd, "titulo"),
+    texto(fd, "descricao"),
+    texto(fd, "link_externo"),
+    id
+  );
+  tudoMudou();
+  revalidatePath(`/solucoes/${id}`);
+}
+
+export async function apagarSolucao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const solucao = db
+    .prepare("SELECT oportunidade_id FROM solucao WHERE id = ?")
+    .get(id) as { oportunidade_id: number | null } | undefined;
+  db.transaction(() => {
+    // A ficha de lançamento sobrevive à solução — só perde o vínculo.
+    db.prepare("UPDATE lancamento SET solucao_id = NULL WHERE solucao_id = ?").run(id);
+    db.prepare(
+      "DELETE FROM teste_suposicao WHERE suposicao_id IN (SELECT id FROM suposicao WHERE solucao_id = ?)"
+    ).run(id);
+    db.prepare("DELETE FROM suposicao WHERE solucao_id = ?").run(id);
+    db.prepare("DELETE FROM passo_story_map WHERE solucao_id = ?").run(id);
+    db.prepare("DELETE FROM solucao WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+  redirect(solucao?.oportunidade_id ? `/oportunidades/${solucao.oportunidade_id}` : "/oportunidades");
+}
+
+export async function apagarPassoStoryMap(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const passo = db
+    .prepare("SELECT solucao_id FROM passo_story_map WHERE id = ?")
+    .get(id) as { solucao_id: number } | undefined;
+  db.transaction(() => {
+    db.prepare("UPDATE suposicao SET passo_story_map_id = NULL WHERE passo_story_map_id = ?").run(id);
+    db.prepare("DELETE FROM passo_story_map WHERE id = ?").run(id);
+  })();
+  if (passo) revalidatePath(`/solucoes/${passo.solucao_id}`);
+}
+
+export async function atualizarSuposicao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const solucaoId = (
+    db.prepare("SELECT solucao_id FROM suposicao WHERE id = ?").get(id) as { solucao_id: number }
+  ).solucao_id;
+  db.prepare(
+    "UPDATE suposicao SET texto = ?, lente = ?, passo_story_map_id = ?, importancia = ?, evidencia = ? WHERE id = ?"
+  ).run(
+    texto(fd, "texto"),
+    texto(fd, "lente"),
+    inteiroOuNulo(fd, "passo_story_map_id"),
+    Number(fd.get("importancia") ?? 3),
+    Number(fd.get("evidencia") ?? 3),
+    id
+  );
+  tudoMudou();
+  revalidatePath(`/solucoes/${solucaoId}`);
+}
+
+export async function apagarSuposicao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const solucaoId = (
+    db.prepare("SELECT solucao_id FROM suposicao WHERE id = ?").get(id) as { solucao_id: number }
+  ).solucao_id;
+  db.transaction(() => {
+    db.prepare("DELETE FROM teste_suposicao WHERE suposicao_id = ?").run(id);
+    db.prepare("DELETE FROM suposicao WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+  revalidatePath(`/solucoes/${solucaoId}`);
+}
+
+export async function apagarTeste(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const teste = db
+    .prepare("SELECT suposicao_id FROM teste_suposicao WHERE id = ?")
+    .get(id) as { suposicao_id: number } | undefined;
+  if (!teste) return;
+  db.prepare("DELETE FROM teste_suposicao WHERE id = ?").run(id);
+  // Recalcula o estado da suposição a partir dos testes restantes.
+  const restantes = db
+    .prepare("SELECT veredito FROM teste_suposicao WHERE suposicao_id = ? ORDER BY id")
+    .all(teste.suposicao_id) as { veredito: string | null }[];
+  let estado = "mapeada";
+  if (restantes.some((t) => t.veredito === null)) estado = "em_teste";
+  else if (restantes.length > 0) {
+    const ultimo = restantes[restantes.length - 1].veredito;
+    estado = ultimo === "inconclusiva" ? "mapeada" : ultimo ?? "mapeada";
+  }
+  db.prepare("UPDATE suposicao SET estado = ? WHERE id = ?").run(estado, teste.suposicao_id);
+  const solucaoId = (
+    db.prepare("SELECT solucao_id FROM suposicao WHERE id = ?").get(teste.suposicao_id) as {
+      solucao_id: number;
+    }
+  ).solucao_id;
+  tudoMudou();
+  revalidatePath(`/solucoes/${solucaoId}`);
+}
+
+export async function atualizarMetrica(fd: FormData) {
+  db.prepare(
+    "UPDATE metrica_negocio SET nome = ?, definicao = ?, fonte = ?, unidade = ?, meta = ? WHERE id = ?"
+  ).run(
+    texto(fd, "nome"),
+    texto(fd, "definicao"),
+    texto(fd, "fonte"),
+    texto(fd, "unidade"),
+    texto(fd, "meta"),
+    Number(fd.get("id"))
+  );
+  tudoMudou();
+}
+
+export async function apagarMetrica(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("UPDATE lancamento SET metrica_negocio_id = NULL WHERE metrica_negocio_id = ?").run(id);
+    db.prepare("DELETE FROM metrica_valor WHERE metrica_id = ?").run(id);
+    db.prepare("DELETE FROM metrica_negocio WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+}
+
+export async function apagarValorMetrica(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const valor = db
+    .prepare("SELECT metrica_id FROM metrica_valor WHERE id = ?")
+    .get(id) as { metrica_id: number } | undefined;
+  if (!valor) return;
+  db.prepare("DELETE FROM metrica_valor WHERE id = ?").run(id);
+  const ultimo = db
+    .prepare("SELECT valor, data FROM metrica_valor WHERE metrica_id = ? ORDER BY data DESC, id DESC LIMIT 1")
+    .get(valor.metrica_id) as { valor: number; data: string } | undefined;
+  db.prepare("UPDATE metrica_negocio SET valor_atual = ?, atualizado_em = ? WHERE id = ?").run(
+    ultimo?.valor ?? null,
+    ultimo?.data ?? null,
+    valor.metrica_id
+  );
+  tudoMudou();
+}
+
+export async function apagarLancamento(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("DELETE FROM revisao WHERE lancamento_id = ?").run(id);
+    db.prepare("DELETE FROM lancamento WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+  redirect("/lancamentos");
+}
+
+export async function apagarRevisao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const revisao = db
+    .prepare("SELECT lancamento_id FROM revisao WHERE id = ?")
+    .get(id) as { lancamento_id: number } | undefined;
+  db.prepare("DELETE FROM revisao WHERE id = ?").run(id);
+  tudoMudou();
+  if (revisao) revalidatePath(`/lancamentos/${revisao.lancamento_id}`);
+}
+
+export async function apagarPassoJornada(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("UPDATE oportunidade SET passo_jornada_id = NULL WHERE passo_jornada_id = ?").run(id);
+    db.prepare("DELETE FROM passo_jornada WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+}
+
 // ── Passo 9 do loop: estado da solução com portões de saída ──────────────────
 
 export async function mudarEstadoSolucao(fd: FormData) {

@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { criarPassoJornada, criarSolucao, mudarEstadoOportunidade } from "@/app/actions";
+import {
+  apagarPassoJornada,
+  criarPassoJornada,
+  criarSolucao,
+  mudarEstadoOportunidade,
+} from "@/app/actions";
+import { Apagar } from "@/app/ui";
 import {
   getOportunidades,
   getPassosJornada,
@@ -169,12 +175,15 @@ export default async function Oportunidades({
           {passos.length > 0 ? (
             <ul className="mb-3 space-y-1">
               {passos.map((p) => (
-                <li key={p.id} className="text-sm">
-                  <span className="font-mono text-xs text-muted">
-                    {p.persona_nome ?? "Geral"} {p.ordem}.
-                  </span>{" "}
-                  {p.titulo}
-                  {p.descricao && <span className="text-muted"> — {p.descricao}</span>}
+                <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span>
+                    <span className="font-mono text-xs text-muted">
+                      {p.persona_nome ?? "Geral"} {p.ordem}.
+                    </span>{" "}
+                    {p.titulo}
+                    {p.descricao && <span className="text-muted"> — {p.descricao}</span>}
+                  </span>
+                  <Apagar action={apagarPassoJornada} id={p.id} />
                 </li>
               ))}
             </ul>

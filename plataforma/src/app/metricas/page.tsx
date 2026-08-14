@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { criarMetrica, registrarValorMetrica } from "@/app/actions";
+import {
+  apagarMetrica,
+  apagarValorMetrica,
+  atualizarMetrica,
+  criarMetrica,
+  registrarValorMetrica,
+} from "@/app/actions";
+import { Apagar, Editar } from "@/app/ui";
 import {
   getHistoricoMetrica,
   getMetricas,
@@ -51,10 +58,15 @@ export default function Metricas() {
               {m.fonte && (
                 <p className="mt-1 font-mono text-xs text-muted">{m.fonte}</p>
               )}
-              {historico.length > 1 && (
-                <p className="mt-2 font-mono text-xs text-muted">
-                  histórico: {historico.map((h) => h.valor).join(" → ")}
-                </p>
+              {historico.length > 0 && (
+                <ul className="mt-2 space-y-0.5">
+                  {historico.map((h) => (
+                    <li key={h.id} className="flex items-center justify-between font-mono text-xs text-muted">
+                      <span>{h.data} · {h.valor}</span>
+                      <Apagar action={apagarValorMetrica} id={h.id} rotulo="×" />
+                    </li>
+                  ))}
+                </ul>
               )}
               <div className="mt-3 border-t border-line pt-2">
                 <div className="lbl">Leading apontando para cá</div>
@@ -96,6 +108,22 @@ export default function Metricas() {
                 </div>
                 <button className="btn-ghost" type="submit">OK</button>
               </form>
+              <div className="mt-3 flex gap-4 border-t border-line pt-2">
+                <Editar>
+                  <form action={atualizarMetrica} className="grid grid-cols-1 gap-2">
+                    <input type="hidden" name="id" value={m.id} />
+                    <input name="nome" defaultValue={m.nome} required className="field" />
+                    <input name="definicao" defaultValue={m.definicao} className="field" placeholder="definição" />
+                    <input name="fonte" defaultValue={m.fonte} className="field" placeholder="fonte (descrição)" />
+                    <div className="flex gap-2">
+                      <input name="unidade" defaultValue={m.unidade} className="field w-28" placeholder="unidade" />
+                      <input name="meta" defaultValue={m.meta} className="field flex-1" placeholder="meta" />
+                      <button className="btn-ghost" type="submit">Salvar</button>
+                    </div>
+                  </form>
+                </Editar>
+                <Apagar action={apagarMetrica} id={m.id} />
+              </div>
             </section>
           );
         })}
