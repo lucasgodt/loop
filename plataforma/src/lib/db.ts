@@ -183,7 +183,27 @@ CREATE TABLE IF NOT EXISTS teste_suposicao (
   criada_em TEXT NOT NULL,
   concluido_em TEXT
 );
+
+-- Fase 3: fontes de dados plugáveis. tipo referencia um Provedor em
+-- src/lib/fontes/; config é o JSON de conexão daquele tipo.
+CREATE TABLE IF NOT EXISTS fonte_dados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  nome TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  config TEXT NOT NULL DEFAULT '{}',
+  criada_em TEXT NOT NULL
+);
 `;
+
+// Migrações aditivas: colunas novas em tabelas que já existem em bancos criados
+// antes delas. CREATE TABLE IF NOT EXISTS não altera tabela existente.
+const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
+  ["metrica_negocio", "fonte_dados_id INTEGER REFERENCES fonte_dados(id)"],
+  ["metrica_negocio", "consulta TEXT NOT NULL DEFAULT ''"],
+  ["lancamento", "fonte_dados_id INTEGER REFERENCES fonte_dados(id)"],
+  ["lancamento", "consulta TEXT NOT NULL DEFAULT ''"],
+];
 
 declare global {
   var __plataformaDb: Database.Database | undefined;
@@ -195,6 +215,13 @@ function open(): Database.Database {
   conn.pragma("journal_mode = WAL");
   conn.pragma("foreign_keys = ON");
   conn.exec(SCHEMA);
+  for (const [tabela, ddl] of COLUNAS_NOVAS) {
+    const coluna = ddl.split(" ")[0];
+    const existentes = conn.pragma(`table_info(${tabela})`) as { name: string }[];
+    if (!existentes.some((c) => c.name === coluna)) {
+      conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${ddl}`);
+    }
+  }
   return conn;
 }
 

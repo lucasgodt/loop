@@ -385,10 +385,20 @@ plataforma.*
 **Fase 2 — o funil completo:** priorização com os 4 critérios e limite de WIP ·
 soluções com bloqueio de 3+ · suposições com as 5 lentes · testes de suposição.
 
-**Fase 3 — automação e integração:** queries agendadas na fonte do produto ·
-sincronização com Linear · transcrição de gravações · visualização gráfica da árvore ·
-assistência de IA (sugestão de oportunidades e suposições) · suporte real a múltiplos
-produtos.
+**Fase 3 — automação desacoplada:** medição automática via **fontes de dados
+plugáveis**. A plataforma não conhece BigQuery, Mixpanel ou planilha — conhece um
+contrato de `Provedor` (`src/lib/fontes/`): cada tipo de fonte é um arquivo que
+implementa `executar(config, consulta) → valor`; plugar um tipo novo é criar o
+arquivo e registrá-lo, nada mais muda. Uma `FonteDeDados` é uma conexão (tipo +
+config JSON); métricas e lançamentos guardam só *qual fonte* e *qual consulta*.
+Provedores iniciais: `comando` (qualquer coisa que imprime um número no terminal —
+é como o BigQuery pluga, via `bq query`) e `http` (JSON por caminho de pontos).
+O agendamento também é desacoplado: `npm run atualizar` roda tudo e imprime o
+digest de pendências — quem chama é o cron/launchd, não o app.
+
+**Depois:** sincronização com Linear · transcrição de gravações · visualização
+gráfica da árvore · assistência de IA (sugestão de oportunidades e suposições) ·
+suporte real a múltiplos produtos.
 
 ## Decisões em aberto
 

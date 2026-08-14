@@ -29,6 +29,8 @@ export interface Metrica {
   meta: string;
   valor_atual: number | null;
   atualizado_em: string | null;
+  fonte_dados_id: number | null;
+  consulta: string;
 }
 
 export interface Entrevista {
@@ -87,6 +89,8 @@ export interface Lancamento {
   notas: string;
   veredito: string | null;
   aprendizado: string;
+  fonte_dados_id: number | null;
+  consulta: string;
 }
 
 export interface Revisao {
@@ -476,4 +480,38 @@ export function lancamentoDaSolucao(solucaoId: number): Lancamento | null {
     (db.prepare("SELECT * FROM lancamento WHERE solucao_id = ?").get(solucaoId) as Lancamento) ??
     null
   );
+}
+
+// ── Fase 3: fontes de dados plugáveis ────────────────────────────────────────
+
+export interface Fonte {
+  id: number;
+  produto_id: number;
+  nome: string;
+  tipo: string;
+  config: string;
+}
+
+export function getFontes(produtoId: number): Fonte[] {
+  return db
+    .prepare("SELECT id, produto_id, nome, tipo, config FROM fonte_dados WHERE produto_id = ? ORDER BY id")
+    .all(produtoId) as Fonte[];
+}
+
+export function getFonte(id: number): Fonte | null {
+  return (
+    (db
+      .prepare("SELECT id, produto_id, nome, tipo, config FROM fonte_dados WHERE id = ?")
+      .get(id) as Fonte) ?? null
+  );
+}
+
+export function usosDaFonte(fonteId: number): number {
+  const m = db
+    .prepare("SELECT COUNT(*) AS n FROM metrica_negocio WHERE fonte_dados_id = ?")
+    .get(fonteId) as { n: number };
+  const l = db
+    .prepare("SELECT COUNT(*) AS n FROM lancamento WHERE fonte_dados_id = ?")
+    .get(fonteId) as { n: number };
+  return m.n + l.n;
 }

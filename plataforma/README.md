@@ -35,9 +35,29 @@ npm run dev    # http://localhost:3000 (ou próxima porta livre)
 | `/solucoes/[id]` | 7 e 8 · Story map, suposições (5 lentes) e testes |
 | `/lancamentos` | 9 e 10 · Fichas de lançamento, revisões 30/60/90, veredito |
 
+| `/fontes` | infra · Fontes de dados plugáveis (medição automática) |
+
 Os portões do funil são regra do sistema, não disciplina: discovery exige avaliação
 completa e vaga no WIP; suposições exigem 3+ soluções na oportunidade; teste exige
 critério de sucesso definido antes; solução só é "lançada" com ficha criada.
 
-Fase 3 (a construir): automação (queries agendadas na fonte do produto, Linear,
-transcrição de gravações, IA assistiva) e múltiplos produtos.
+## Fontes de dados plugáveis (fase 3)
+
+A medição automática é desacoplada por contrato: cada tipo de fonte é um `Provedor`
+em `src/lib/fontes/` com `executar(config, consulta) → valor`. Plugar um tipo novo
+(BigQuery nativo, Mixpanel, Sheets…) = criar um arquivo e adicioná-lo ao registro em
+`src/lib/fontes/index.ts`. Nada mais muda.
+
+- **comando** — roda qualquer comando no shell e lê o número da última linha. É como
+  o BigQuery pluga hoje: `bq query --format=csv '…' | tail -1`.
+- **http** — GET numa URL JSON, extração por caminho de pontos.
+
+Métricas e lançamentos guardam só *qual fonte* + *qual consulta*, e ganham o botão
+"Medir agora". Agendamento também desacoplado:
+
+```bash
+npm run atualizar   # mede todas as métricas com fonte e imprime pendências
+# agendar: crontab -e →  0 7 * * 1  cd <pasta> && npm run atualizar
+```
+
+A construir: Linear, transcrição de gravações, IA assistiva, múltiplos produtos.

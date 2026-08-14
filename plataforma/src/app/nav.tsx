@@ -12,6 +12,7 @@ const ITENS = [
   { href: "/oportunidades", rotulo: "Oportunidades" },
   { href: "/priorizacao", rotulo: "Priorização" },
   { href: "/lancamentos", rotulo: "Lançamentos" },
+  { href: "/fontes", rotulo: "Fontes" },
 ];
 
 export function Nav() {

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { agora, db, hojeLocal } from "@/lib/db";
-import { avaliacaoCompleta, getAvaliacao, LIMITE_WIP } from "@/lib/queries";
+import { medir, PROVEDORES } from "@/lib/fontes";
+import { avaliacaoCompleta, getAvaliacao, getFonte, LIMITE_WIP } from "@/lib/queries";
 
 function texto(fd: FormData, campo: string): string {
   return String(fd.get(campo) ?? "").trim();
@@ -440,13 +441,15 @@ export async function apagarTeste(fd: FormData) {
 
 export async function atualizarMetrica(fd: FormData) {
   db.prepare(
-    "UPDATE metrica_negocio SET nome = ?, definicao = ?, fonte = ?, unidade = ?, meta = ? WHERE id = ?"
+    "UPDATE metrica_negocio SET nome = ?, definicao = ?, fonte = ?, unidade = ?, meta = ?, fonte_dados_id = ?, consulta = ? WHERE id = ?"
   ).run(
     texto(fd, "nome"),
     texto(fd, "definicao"),
     texto(fd, "fonte"),
     texto(fd, "unidade"),
     texto(fd, "meta"),
+    inteiroOuNulo(fd, "fonte_dados_id"),
+    texto(fd, "consulta"),
     Number(fd.get("id"))
   );
   tudoMudou();
@@ -613,7 +616,7 @@ export async function atualizarLancamento(fd: FormData) {
     `UPDATE lancamento SET
        nome = ?, data_lancamento = ?, hipotese = ?, metrica_primaria = ?, metrica_negocio_id = ?,
        baseline = ?, meta = ?, guardrails = ?, fonte_dados = ?, notas = ?,
-       veredito = ?, aprendizado = ?
+       veredito = ?, aprendizado = ?, fonte_dados_id = ?, consulta = ?
      WHERE id = ?`
   ).run(
     texto(fd, "nome"),
@@ -628,6 +631,8 @@ export async function atualizarLancamento(fd: FormData) {
     texto(fd, "notas"),
     texto(fd, "veredito") || null,
     texto(fd, "aprendizado"),
+    inteiroOuNulo(fd, "fonte_dados_id"),
+    texto(fd, "consulta"),
     id
   );
   tudoMudou();
@@ -657,6 +662,107 @@ export async function gerarRevisoes(fd: FormData) {
   }
   tudoMudou();
   revalidatePath(`/lancamentos/${id}`);
+}
+
+// ── Fase 3: fontes de dados plugáveis e medição automática ───────────────────
+
+export async function criarFonte(fd: FormData) {
+  const config = texto(fd, "config") || "{}";
+  const tipo = texto(fd, "tipo");
+  try {
+    JSON.parse(config);
+  } catch {
+    redirect("/fontes?erro=" + encodeURIComponent("config não é JSON válido"));
+  }
+  if (!PROVEDORES.has(tipo)) {
+    redirect("/fontes?erro=" + encodeURIComponent(`tipo desconhecido: ${tipo}`));
+  }
+  db.prepare(
+    "INSERT INTO fonte_dados (produto_id, nome, tipo, config, criada_em) VALUES (?, ?, ?, ?, ?)"
+  ).run(Number(fd.get("produto_id")), texto(fd, "nome"), tipo, config, agora());
+  revalidatePath("/fontes");
+  tudoMudou();
+}
+
+export async function atualizarFonte(fd: FormData) {
+  const config = texto(fd, "config") || "{}";
+  try {
+    JSON.parse(config);
+  } catch {
+    redirect("/fontes?erro=" + encodeURIComponent("config não é JSON válido"));
+  }
+  db.prepare("UPDATE fonte_dados SET nome = ?, tipo = ?, config = ? WHERE id = ?").run(
+    texto(fd, "nome"),
+    texto(fd, "tipo"),
+    config,
+    Number(fd.get("id"))
+  );
+  revalidatePath("/fontes");
+  tudoMudou();
+}
+
+export async function apagarFonte(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("UPDATE metrica_negocio SET fonte_dados_id = NULL WHERE fonte_dados_id = ?").run(id);
+    db.prepare("UPDATE lancamento SET fonte_dados_id = NULL WHERE fonte_dados_id = ?").run(id);
+    db.prepare("DELETE FROM fonte_dados WHERE id = ?").run(id);
+  })();
+  revalidatePath("/fontes");
+  tudoMudou();
+}
+
+/** Executa a fonte plugada da métrica e registra o valor de hoje. */
+export async function medirMetrica(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const metrica = db
+    .prepare("SELECT fonte_dados_id, consulta FROM metrica_negocio WHERE id = ?")
+    .get(id) as { fonte_dados_id: number | null; consulta: string } | undefined;
+  const fonte = metrica?.fonte_dados_id ? getFonte(metrica.fonte_dados_id) : null;
+  if (!metrica || !fonte) return;
+
+  let valor: number;
+  try {
+    valor = (await medir(fonte, metrica.consulta)).valor;
+  } catch (e) {
+    redirect("/metricas?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e)));
+  }
+  const data = hojeLocal();
+  db.prepare("INSERT INTO metrica_valor (metrica_id, valor, data) VALUES (?, ?, ?)").run(id, valor, data);
+  db.prepare("UPDATE metrica_negocio SET valor_atual = ?, atualizado_em = ? WHERE id = ?").run(valor, data, id);
+  tudoMudou();
+}
+
+/** Executa a fonte plugada do lançamento e registra a revisão com o valor medido. */
+export async function medirRevisao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const revisao = db
+    .prepare("SELECT lancamento_id FROM revisao WHERE id = ?")
+    .get(id) as { lancamento_id: number } | undefined;
+  if (!revisao) return;
+  const lancamento = db
+    .prepare("SELECT fonte_dados_id, consulta FROM lancamento WHERE id = ?")
+    .get(revisao.lancamento_id) as { fonte_dados_id: number | null; consulta: string };
+  const fonte = lancamento.fonte_dados_id ? getFonte(lancamento.fonte_dados_id) : null;
+  if (!fonte) return;
+
+  let valor: number;
+  let detalhe: string;
+  try {
+    const resultado = await medir(fonte, lancamento.consulta);
+    valor = resultado.valor;
+    detalhe = resultado.detalhe;
+  } catch (e) {
+    redirect(
+      `/lancamentos/${revisao.lancamento_id}?erro=` +
+        encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  db.prepare(
+    "UPDATE revisao SET valor_observado = ?, data_realizada = ?, notas = ? WHERE id = ?"
+  ).run(String(valor), hojeLocal(), detalhe, id);
+  tudoMudou();
+  revalidatePath(`/lancamentos/${revisao.lancamento_id}`);
 }
 
 export async function registrarRevisao(fd: FormData) {

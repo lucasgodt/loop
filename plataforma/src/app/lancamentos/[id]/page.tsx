@@ -4,25 +4,39 @@ import {
   apagarRevisao,
   atualizarLancamento,
   gerarRevisoes,
+  medirRevisao,
   registrarRevisao,
 } from "@/app/actions";
 import { Apagar } from "@/app/ui";
-import { diasDeAtraso, getLancamento, getMetricas, getProduto, getRevisoes } from "@/lib/queries";
+import {
+  diasDeAtraso,
+  getFontes,
+  getLancamento,
+  getMetricas,
+  getProduto,
+  getRevisoes,
+} from "@/lib/queries";
 import { hojeLocal } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function FichaLancamento({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ erro?: string }>;
 }) {
   const { id } = await params;
+  const { erro } = await searchParams;
   const lancamento = getLancamento(Number(id));
   const produto = getProduto();
   if (!lancamento || !produto) notFound();
   const metricas = getMetricas(produto.id);
   const revisoes = getRevisoes(lancamento.id);
+  const fontes = getFontes(produto.id);
+  const fontePlugada = fontes.find((f) => f.id === lancamento.fonte_dados_id);
+  const podeMediar = !!fontePlugada && !!lancamento.consulta;
 
   return (
     <div>
@@ -31,6 +45,12 @@ export default async function FichaLancamento({
       <div className="mt-2">
         <Apagar action={apagarLancamento} id={lancamento.id} rotulo="apagar lançamento" />
       </div>
+
+      {erro && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
+          Falha na medição: {erro}
+        </div>
+      )}
 
       <form action={atualizarLancamento} className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={lancamento.id} />
@@ -96,7 +116,7 @@ export default async function FichaLancamento({
           <input id="guardrails" name="guardrails" defaultValue={lancamento.guardrails} className="field" />
         </div>
         <div className="md:col-span-2">
-          <label className="lbl" htmlFor="fonte_dados">Fonte de dados / query</label>
+          <label className="lbl" htmlFor="fonte_dados">Como medir (descrição)</label>
           <textarea
             id="fonte_dados"
             name="fonte_dados"
@@ -104,6 +124,30 @@ export default async function FichaLancamento({
             defaultValue={lancamento.fonte_dados}
             className="field font-mono text-xs"
             placeholder="Se não dá para escrever como medir, a métrica ainda não é mensurável"
+          />
+        </div>
+        <div>
+          <label className="lbl" htmlFor="fonte_dados_id">Fonte plugada (automação)</label>
+          <select
+            id="fonte_dados_id"
+            name="fonte_dados_id"
+            defaultValue={lancamento.fonte_dados_id ?? ""}
+            className="field"
+          >
+            <option value="">manual (sem fonte)</option>
+            {fontes.map((f) => (
+              <option key={f.id} value={f.id}>{f.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="lbl" htmlFor="consulta">Consulta na fonte</label>
+          <input
+            id="consulta"
+            name="consulta"
+            defaultValue={lancamento.consulta}
+            className="field font-mono text-xs"
+            placeholder="ver exemplos na página Fontes"
           />
         </div>
         <div className="md:col-span-2">
@@ -183,6 +227,14 @@ export default async function FichaLancamento({
                         <Apagar action={apagarRevisao} id={r.id} />
                       </span>
                     </div>
+                    {podeMediar && (
+                      <form action={medirRevisao} className="mt-2">
+                        <input type="hidden" name="id" value={r.id} />
+                        <button className="btn" type="submit">
+                          Medir agora via {fontePlugada!.nome}
+                        </button>
+                      </form>
+                    )}
                     <form action={registrarRevisao} className="mt-2 flex flex-wrap items-end gap-2">
                       <input type="hidden" name="id" value={r.id} />
                       <div>

@@ -4,10 +4,12 @@ import {
   apagarValorMetrica,
   atualizarMetrica,
   criarMetrica,
+  medirMetrica,
   registrarValorMetrica,
 } from "@/app/actions";
 import { Apagar, Editar } from "@/app/ui";
 import {
+  getFontes,
   getHistoricoMetrica,
   getMetricas,
   getProduto,
@@ -16,10 +18,16 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default function Metricas() {
+export default async function Metricas({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string }>;
+}) {
+  const { erro } = await searchParams;
   const produto = getProduto();
   if (!produto) return null;
   const metricas = getMetricas(produto.id);
+  const fontes = getFontes(produto.id);
 
   return (
     <div>
@@ -32,15 +40,27 @@ export default function Metricas() {
         plataforma termina numa métrica desta página.
       </p>
 
+      {erro && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
+          Falha na medição: {erro}
+        </div>
+      )}
+
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         {metricas.map((m) => {
           const historico = getHistoricoMetrica(m.id);
           const leading = lancamentosDaMetrica(m.id);
+          const fontePlugada = fontes.find((f) => f.id === m.fonte_dados_id);
           return (
             <section key={m.id} className="card">
               <div className="flex items-baseline justify-between gap-2">
                 <div className="lbl">{m.nome}</div>
-                <span className="badge bg-line/60 text-muted">lagging</span>
+                <span className="flex gap-1.5">
+                  {fontePlugada && (
+                    <span className="badge bg-accent-soft text-accent">{fontePlugada.nome}</span>
+                  )}
+                  <span className="badge bg-line/60 text-muted">lagging</span>
+                </span>
               </div>
               <div className="font-mono text-5xl tabular-nums">
                 {m.valor_atual ?? "—"}
@@ -108,6 +128,12 @@ export default function Metricas() {
                 </div>
                 <button className="btn-ghost" type="submit">OK</button>
               </form>
+              {fontePlugada && m.consulta && (
+                <form action={medirMetrica} className="mt-2">
+                  <input type="hidden" name="id" value={m.id} />
+                  <button className="btn" type="submit">Medir agora via {fontePlugada.nome}</button>
+                </form>
+              )}
               <div className="mt-3 flex gap-4 border-t border-line pt-2">
                 <Editar>
                   <form action={atualizarMetrica} className="grid grid-cols-1 gap-2">
@@ -118,6 +144,20 @@ export default function Metricas() {
                     <div className="flex gap-2">
                       <input name="unidade" defaultValue={m.unidade} className="field w-28" placeholder="unidade" />
                       <input name="meta" defaultValue={m.meta} className="field flex-1" placeholder="meta" />
+                    </div>
+                    <div className="flex gap-2">
+                      <select name="fonte_dados_id" defaultValue={m.fonte_dados_id ?? ""} className="field w-auto">
+                        <option value="">manual (sem fonte)</option>
+                        {fontes.map((f) => (
+                          <option key={f.id} value={f.id}>{f.nome}</option>
+                        ))}
+                      </select>
+                      <input
+                        name="consulta"
+                        defaultValue={m.consulta}
+                        className="field flex-1 font-mono text-xs"
+                        placeholder="consulta na fonte (ver exemplos em Fontes)"
+                      />
                       <button className="btn-ghost" type="submit">Salvar</button>
                     </div>
                   </form>
