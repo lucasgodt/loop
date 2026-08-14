@@ -175,8 +175,11 @@ oportunidade exige ligar pelo menos uma entrevista ou sinal — isso mata a
 "oportunidade inventada na sala de reunião". A contagem de evidências vira um proxy
 natural de frequência ("quantas vezes ouvimos isso?"), que alimenta a priorização.
 
-**MVP → evolução.** MVP: árvore como lista indentada agrupada por passo da jornada
-(não precisa de canvas visual). Evolução: visualização gráfica da árvore.
+**MVP → evolução.** A visualização gráfica da árvore — importante para raciocinar
+sobre as dependências entre oportunidades — é a visão padrão de /oportunidades:
+nós conectados por linhas, pendurados nos passos da jornada, com as soluções como
+folhas. A lista indentada continua como visão alternativa (onde vivem as ações
+inline e as arquivadas).
 
 ### 5. Priorização de oportunidades
 

@@ -6,6 +6,7 @@ import {
   mudarEstadoOportunidade,
 } from "@/app/actions";
 import { Apagar } from "@/app/ui";
+import { ArvoreVisual } from "./arvore";
 import {
   getOportunidades,
   getPassosJornada,
@@ -96,9 +97,10 @@ function No({ o, filhos, produtoId }: { o: Oportunidade; filhos: Map<number, Opo
 export default async function Oportunidades({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; op?: string }>;
+  searchParams: Promise<{ erro?: string; op?: string; visao?: string }>;
 }) {
-  const { erro, op } = await searchParams;
+  const { erro, op, visao } = await searchParams;
+  const emLista = visao === "lista";
   const produto = getProduto();
   if (!produto) return null;
   const oportunidades = getOportunidades(produto.id);
@@ -148,25 +150,59 @@ export default async function Oportunidades({
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 flex items-center justify-between gap-3">
         <Link href="/oportunidades/nova" className="btn">Nova oportunidade</Link>
+        <div className="flex rounded-lg border border-line bg-card p-0.5 font-mono text-xs">
+          <Link
+            href="/oportunidades"
+            className={`rounded-md px-3 py-1.5 transition ${
+              !emLista ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:text-ink"
+            }`}
+          >
+            árvore
+          </Link>
+          <Link
+            href="/oportunidades?visao=lista"
+            className={`rounded-md px-3 py-1.5 transition ${
+              emLista ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:text-ink"
+            }`}
+          >
+            lista
+          </Link>
+        </div>
       </div>
 
-      {[...grupos.entries()].map(([grupo, os]) => (
-        <section key={grupo} className="mt-6">
-          <h2 className="lbl">{grupo}</h2>
-          <ul>
-            {os.map((o) => (
-              <No key={o.id} o={o} filhos={filhos} produtoId={produto.id} />
-            ))}
-          </ul>
-        </section>
-      ))}
-      {raizes.length === 0 && (
-        <div className="card mt-6 text-sm text-muted">
-          Árvore vazia. As primeiras oportunidades costumam chegar promovidas do inbox de
-          sinais ou extraídas de uma entrevista.
+      {!emLista ? (
+        <div className="mt-6">
+          <ArvoreVisual
+            oportunidades={oportunidades}
+            passos={passos}
+            personas={personas}
+          />
+          <p className="mt-2 text-xs text-muted">
+            Clique num nó para abrir a oportunidade (avaliar, mover, ideação). Oportunidades
+            arquivadas e ações inline estão na visão em lista.
+          </p>
         </div>
+      ) : (
+        <>
+          {[...grupos.entries()].map(([grupo, os]) => (
+            <section key={grupo} className="mt-6">
+              <h2 className="lbl">{grupo}</h2>
+              <ul>
+                {os.map((o) => (
+                  <No key={o.id} o={o} filhos={filhos} produtoId={produto.id} />
+                ))}
+              </ul>
+            </section>
+          ))}
+          {raizes.length === 0 && (
+            <div className="card mt-6 text-sm text-muted">
+              Árvore vazia. As primeiras oportunidades costumam chegar promovidas do inbox de
+              sinais ou extraídas de uma entrevista.
+            </div>
+          )}
+        </>
       )}
 
       <section className="mt-10">

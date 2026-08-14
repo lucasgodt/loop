@@ -69,3 +69,69 @@ body {
     letter-spacing: -0.01em;
   }
 }
+
+/* ── Árvore de oportunidades (conectores) ─────────────────────────────────
+   Padrão clássico de árvore em CSS: cada <li> desenha a barra horizontal e a
+   descida até o nó; o <ul> aninhado desenha a descida a partir do pai. */
+.arvore ul {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  padding-top: 18px;
+}
+.arvore > ul {
+  padding-top: 0;
+}
+.arvore li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  list-style: none;
+  padding: 18px 8px 0;
+}
+.arvore li::before,
+.arvore li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 18px;
+  border-top: 2px solid var(--line);
+}
+.arvore li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--line);
+}
+.arvore li:only-child::before,
+.arvore li:only-child::after {
+  display: none;
+}
+.arvore li:only-child {
+  padding-top: 0;
+}
+.arvore ul ul {
+  padding-top: 18px;
+}
+.arvore li:first-child::before,
+.arvore li:last-child::after {
+  border: 0 none;
+}
+.arvore li:last-child::before {
+  border-right: 2px solid var(--line);
+  border-radius: 0 10px 0 0;
+}
+.arvore li:first-child::after {
+  border-radius: 10px 0 0 0;
+}
+.arvore ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 18px;
+  border-left: 2px solid var(--line);
+}
