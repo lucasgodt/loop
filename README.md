@@ -37,7 +37,8 @@ ordem de construção.
 ```
 gestao_produto/
 ├── README.md                 ← este arquivo
-├── plataforma.md             ← ★ o documento principal: loop → plataforma
+├── plataforma.md             ← ★ a especificação: loop → plataforma
+├── plataforma/               ← ★ a plataforma em si ("Loop.") — Next.js + SQLite
 ├── lancamentos/              ← fichas de lançamento (semente do módulo de mensuração)
 │   ├── TEMPLATE.md
 │   ├── olitef.md             ← retroativo (rascunho)
@@ -46,5 +47,7 @@ gestao_produto/
 └── processo/
     └── README.md             ← aponta para plataforma.md
 ```
+
+Para rodar a plataforma: `cd plataforma && npm install && npm run seed && npm run dev`.
 
 Referência do loop: `~/Downloads/Loops de produto.png` (export do board do Miro).

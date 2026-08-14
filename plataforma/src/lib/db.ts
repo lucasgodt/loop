@@ -1,0 +1,172 @@
+import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const DB_PATH = path.join(DATA_DIR, "plataforma.db");
+
+// Cada tabela nasce de um passo do board "Loops de produto" — ver ../plataforma.md.
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS produto (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome TEXT NOT NULL,
+  descricao TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS persona (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  nome TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS passo_jornada (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  persona_id INTEGER REFERENCES persona(id),
+  ordem INTEGER NOT NULL DEFAULT 0,
+  titulo TEXT NOT NULL,
+  descricao TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS metrica_negocio (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  nome TEXT NOT NULL,
+  definicao TEXT NOT NULL DEFAULT '',
+  fonte TEXT NOT NULL DEFAULT '',
+  unidade TEXT NOT NULL DEFAULT '',
+  meta TEXT NOT NULL DEFAULT '',
+  valor_atual REAL,
+  atualizado_em TEXT
+);
+
+CREATE TABLE IF NOT EXISTS metrica_valor (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  metrica_id INTEGER NOT NULL REFERENCES metrica_negocio(id),
+  valor REAL NOT NULL,
+  data TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS entrevista (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  data TEXT NOT NULL,
+  entrevistado TEXT NOT NULL,
+  persona_id INTEGER REFERENCES persona(id),
+  link_gravacao TEXT NOT NULL DEFAULT '',
+  historia TEXT NOT NULL DEFAULT '',
+  notas TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL
+);
+
+-- status: novo | promovido | arquivado
+CREATE TABLE IF NOT EXISTS sinal (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  canal TEXT NOT NULL,
+  conteudo TEXT NOT NULL,
+  data TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'novo',
+  criada_em TEXT NOT NULL
+);
+
+-- estado: identificada | priorizada | em_discovery | resolvida | arquivada
+CREATE TABLE IF NOT EXISTS oportunidade (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  titulo TEXT NOT NULL,
+  persona_id INTEGER REFERENCES persona(id),
+  passo_jornada_id INTEGER REFERENCES passo_jornada(id),
+  pai_id INTEGER REFERENCES oportunidade(id),
+  estado TEXT NOT NULL DEFAULT 'identificada',
+  notas TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evidencia (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  oportunidade_id INTEGER NOT NULL REFERENCES oportunidade(id),
+  entrevista_id INTEGER REFERENCES entrevista(id),
+  sinal_id INTEGER REFERENCES sinal(id),
+  criada_em TEXT NOT NULL
+);
+
+-- estado: ideia | em_teste | em_desenvolvimento | lancada | descartada
+CREATE TABLE IF NOT EXISTS solucao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  oportunidade_id INTEGER REFERENCES oportunidade(id),
+  titulo TEXT NOT NULL,
+  descricao TEXT NOT NULL DEFAULT '',
+  estado TEXT NOT NULL DEFAULT 'ideia',
+  link_externo TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL
+);
+
+-- veredito: NULL (aberto) | sucesso | fracasso | inconclusivo
+CREATE TABLE IF NOT EXISTS lancamento (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  solucao_id INTEGER REFERENCES solucao(id),
+  nome TEXT NOT NULL,
+  data_lancamento TEXT,
+  hipotese TEXT NOT NULL DEFAULT '',
+  metrica_primaria TEXT NOT NULL DEFAULT '',
+  metrica_negocio_id INTEGER REFERENCES metrica_negocio(id),
+  baseline TEXT NOT NULL DEFAULT '',
+  meta TEXT NOT NULL DEFAULT '',
+  guardrails TEXT NOT NULL DEFAULT '',
+  fonte_dados TEXT NOT NULL DEFAULT '',
+  notas TEXT NOT NULL DEFAULT '',
+  veredito TEXT,
+  aprendizado TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS revisao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lancamento_id INTEGER NOT NULL REFERENCES lancamento(id),
+  rotulo TEXT NOT NULL,
+  data_prevista TEXT NOT NULL,
+  data_realizada TEXT,
+  valor_observado TEXT NOT NULL DEFAULT '',
+  notas TEXT NOT NULL DEFAULT ''
+);
+`;
+
+declare global {
+  var __plataformaDb: Database.Database | undefined;
+}
+
+function open(): Database.Database {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const conn = new Database(DB_PATH);
+  conn.pragma("journal_mode = WAL");
+  conn.pragma("foreign_keys = ON");
+  conn.exec(SCHEMA);
+  return conn;
+}
+
+export const db: Database.Database =
+  globalThis.__plataformaDb ?? (globalThis.__plataformaDb = open());
+
+export function agora(): string {
+  return new Date().toISOString();
+}
+
+/** Data local no formato YYYY-MM-DD. */
+export function hojeLocal(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dia}`;
+}
+
+/** Segunda-feira da semana atual, YYYY-MM-DD local. */
+export function inicioDaSemana(): string {
+  const now = new Date();
+  const diasDesdeSegunda = (now.getDay() + 6) % 7;
+  const segunda = new Date(now);
+  segunda.setDate(now.getDate() - diasDesdeSegunda);
+  return hojeLocal(segunda);
+}

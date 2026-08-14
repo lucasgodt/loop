@@ -1,0 +1,38 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const ITENS = [
+  { href: "/", rotulo: "Agora" },
+  { href: "/entrevistas", rotulo: "Entrevistas" },
+  { href: "/sinais", rotulo: "Sinais" },
+  { href: "/oportunidades", rotulo: "Oportunidades" },
+  { href: "/lancamentos", rotulo: "Lançamentos" },
+  { href: "/metricas", rotulo: "Métricas" },
+];
+
+export function Nav() {
+  const pathname = usePathname();
+  return (
+    <nav className="flex flex-col gap-0.5">
+      {ITENS.map((item) => {
+        const ativo =
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`rounded-lg px-3 py-2 text-sm transition ${
+              ativo
+                ? "bg-accent-soft font-semibold text-accent"
+                : "text-ink hover:bg-line/40"
+            }`}
+          >
+            {item.rotulo}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

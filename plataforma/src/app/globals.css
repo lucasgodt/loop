@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4efe3;
+  --card: #fdfbf5;
+  --ink: #26221a;
+  --muted: #83795f;
+  --line: #e2d9c2;
+  --accent: #2e6b4f;
+  --accent-soft: #e3ecdd;
+  --warn: #b4540a;
+  --warn-soft: #f6e5d2;
+  --danger: #9c3025;
+  --danger-soft: #f3ddd6;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-spline-mono);
+  --font-display: var(--font-fraunces);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo);
+  /* grão de papel sutil */
+  background-image: radial-gradient(rgba(38, 34, 26, 0.035) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-card p-5;
+    box-shadow: 0 1px 0 rgba(38, 34, 26, 0.05);
+  }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-card transition hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm text-ink transition hover:border-accent hover:text-accent;
+  }
+  .field {
+    @apply w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none transition focus:border-accent;
+  }
+  .lbl {
+    @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.22em] text-muted;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide;
+  }
+  .display {
+    font-family: var(--font-fraunces);
+    font-variation-settings: "opsz" 72;
+    letter-spacing: -0.01em;
+  }
+}
