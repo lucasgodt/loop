@@ -117,6 +117,10 @@ export function aplicarSugestao(
         break;
       }
 
+      // Roteirista: o roteiro é material de preparo — aceitar só o arquiva.
+      case "roteiro_entrevista":
+        break;
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

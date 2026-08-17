@@ -64,13 +64,22 @@ A construir: Linear, transcrição de gravações, múltiplos produtos e — por
 com a plataforma completa — o **onboarding guiado** (checklist auto-detectado na
 home seguindo a ordem do loop; ver a fase final em ../plataforma.md).
 
-## Agentes de IA (fase 1 — ver ../agentes.md)
+## Agentes de IA (ver ../agentes.md)
 
-O primeiro agente é o **Fechador de Loop**: na ficha de um lançamento sem veredito,
-o botão "🤖 Rascunhar ficha com IA" gera hipótese + métrica primária + meta +
-guardrails + a consulta na fonte plugada — **testada com dry-run real** e com a
-baseline medida na janela pré-lançamento. Tudo vira uma sugestão aprovável
-(aceitar/rejeitar); aceitar preenche a ficha, que continua 100% editável.
+Três agentes em produção, todos draft-first (sugestão aprovável, fluxo manual
+intacto):
+
+- **Fechador de Loop** (ficha do lançamento): hipótese + métrica primária + meta +
+  guardrails + consulta na fonte plugada **testada com dry-run real** + baseline
+  medida + plano de instrumentação PostHog. Aceitar preenche a ficha.
+- **Triador** (/sinais): cola o bruto (daily do CS, thread) → sinais atômicos com
+  citação literal verificada mecanicamente → destino proposto contra a árvore
+  (evidência de oportunidade existente · oportunidade nova na voz do cliente ·
+  inbox).
+- **Roteirista** (/entrevistas): roteiro story-based personalizado por persona e
+  oportunidade investigada. E toda entrevista aceita transcrição colada — o botão
+  "sintetizar" manda a transcrição pelo Triador, extraindo dores e propondo
+  destinos na árvore.
 
 Para habilitar, crie `.env.local` na raiz da plataforma:
 

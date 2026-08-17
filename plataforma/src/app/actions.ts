@@ -25,8 +25,8 @@ function tudoMudou() {
 
 export async function criarEntrevista(fd: FormData) {
   db.prepare(
-    `INSERT INTO entrevista (produto_id, data, entrevistado, persona_id, link_gravacao, historia, notas, criada_em)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO entrevista (produto_id, data, entrevistado, persona_id, link_gravacao, historia, notas, transcricao, criada_em)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     Number(fd.get("produto_id")),
     texto(fd, "data") || hojeLocal(),
@@ -35,6 +35,7 @@ export async function criarEntrevista(fd: FormData) {
     texto(fd, "link_gravacao"),
     texto(fd, "historia"),
     texto(fd, "notas"),
+    texto(fd, "transcricao"),
     agora()
   );
   tudoMudou();
@@ -254,7 +255,7 @@ export async function concluirTeste(fd: FormData) {
 
 export async function atualizarEntrevista(fd: FormData) {
   db.prepare(
-    `UPDATE entrevista SET data = ?, entrevistado = ?, persona_id = ?, link_gravacao = ?, historia = ?, notas = ? WHERE id = ?`
+    `UPDATE entrevista SET data = ?, entrevistado = ?, persona_id = ?, link_gravacao = ?, historia = ?, notas = ?, transcricao = ? WHERE id = ?`
   ).run(
     texto(fd, "data") || hojeLocal(),
     texto(fd, "entrevistado"),
@@ -262,6 +263,7 @@ export async function atualizarEntrevista(fd: FormData) {
     texto(fd, "link_gravacao"),
     texto(fd, "historia"),
     texto(fd, "notas"),
+    texto(fd, "transcricao"),
     Number(fd.get("id"))
   );
   tudoMudou();
@@ -713,6 +715,64 @@ export async function aceitarSugestao(fd: FormData) {
   if (sugestao.alvo_tabela === "lancamento" && sugestao.alvo_id) {
     revalidatePath(`/lancamentos/${sugestao.alvo_id}`);
   }
+}
+
+/** Botão "preparar entrevista": gera o roteiro story-based como sugestão. */
+export async function gerarRoteiro(fd: FormData) {
+  const produtoId = Number(fd.get("produto_id"));
+  const { executarAgente } = await import("@/lib/agentes/executar");
+  try {
+    await executarAgente("roteirista", produtoId, "manual", undefined, {
+      persona_id: inteiroOuNulo(fd, "persona_id"),
+      oportunidade_id: inteiroOuNulo(fd, "oportunidade_id"),
+    });
+  } catch (e) {
+    redirect(
+      "/entrevistas?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  tudoMudou();
+}
+
+/** Botão "sintetizar": a transcrição vira insumo e passa pelo Triador. */
+export async function sintetizarEntrevista(fd: FormData) {
+  const entrevistaId = Number(fd.get("id"));
+  const entrevista = db
+    .prepare("SELECT produto_id, transcricao, entrevistado FROM entrevista WHERE id = ?")
+    .get(entrevistaId) as
+    | { produto_id: number; transcricao: string; entrevistado: string }
+    | undefined;
+  if (!entrevista?.transcricao?.trim()) {
+    redirect("/entrevistas?erro=" + encodeURIComponent("esta entrevista não tem transcrição colada"));
+  }
+  const insumo = db
+    .prepare(
+      "INSERT INTO insumo (produto_id, canal, conteudo, entrevista_id, criada_em) VALUES (?, ?, ?, ?, ?)"
+    )
+    .run(
+      entrevista.produto_id,
+      `Entrevista: ${entrevista.entrevistado}`,
+      entrevista.transcricao,
+      entrevistaId,
+      agora()
+    );
+  const insumoId = Number(insumo.lastInsertRowid);
+
+  const { executarAgente } = await import("@/lib/agentes/executar");
+  let resultado: { sugestoes: number };
+  try {
+    resultado = await executarAgente("triador", entrevista.produto_id, "manual", insumoId);
+  } catch (e) {
+    redirect(
+      "/entrevistas?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  db.prepare("UPDATE insumo SET processado_em = ? WHERE id = ?").run(agora(), insumoId);
+  tudoMudou();
+  if (resultado.sugestoes === 0) {
+    redirect("/entrevistas?erro=" + encodeURIComponent("o Triador não extraiu nada da transcrição"));
+  }
+  redirect("/sinais");
 }
 
 /** Caixa "triar insumo com IA": persiste o bruto e roda o Triador. */

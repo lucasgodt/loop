@@ -265,6 +265,10 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   // plano de instrumentação do lançamento: quais eventos capturar (PostHog)
   // e onde no produto dispará-los — a ponte entre medir e instrumentar
   ["lancamento", "instrumentacao TEXT NOT NULL DEFAULT ''"],
+  // transcrição integral da entrevista (colada) — insumo da síntese por agente
+  ["entrevista", "transcricao TEXT NOT NULL DEFAULT ''"],
+  // quando o insumo nasce de uma entrevista, o vínculo preserva a proveniência
+  ["insumo", "entrevista_id INTEGER REFERENCES entrevista(id)"],
 ];
 
 declare global {

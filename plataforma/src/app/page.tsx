@@ -67,7 +67,9 @@ export default function Home() {
                       ? `/lancamentos/${s.alvo_id}`
                       : s.tipo.startsWith("sinal_")
                         ? "/sinais"
-                        : "/"
+                        : s.tipo === "roteiro_entrevista"
+                          ? "/entrevistas"
+                          : "/"
                   }
                   className="hover:text-accent"
                 >

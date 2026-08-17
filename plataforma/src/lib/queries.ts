@@ -43,6 +43,7 @@ export interface Entrevista {
   link_gravacao: string;
   historia: string;
   notas: string;
+  transcricao: string;
 }
 
 export interface Sinal {
@@ -144,7 +145,7 @@ export function getHistoricoMetrica(
 export function getEntrevistas(produtoId: number): Entrevista[] {
   return db
     .prepare(
-      `SELECT e.id, e.data, e.entrevistado, e.persona_id, p.nome AS persona_nome, e.link_gravacao, e.historia, e.notas
+      `SELECT e.id, e.data, e.entrevistado, e.persona_id, p.nome AS persona_nome, e.link_gravacao, e.historia, e.notas, e.transcricao
        FROM entrevista e LEFT JOIN persona p ON p.id = e.persona_id
        WHERE e.produto_id = ? ORDER BY e.data DESC, e.id DESC`
     )

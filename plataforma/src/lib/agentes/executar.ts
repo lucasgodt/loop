@@ -11,7 +11,8 @@ export async function executarAgente(
   agenteId: string,
   produtoId: number,
   gatilho: string,
-  alvoId?: number
+  alvoId?: number,
+  params?: Record<string, unknown>
 ): Promise<{ execucaoId: number; sugestoes: number }> {
   const agente = getAgente(agenteId);
 
@@ -43,7 +44,7 @@ export async function executarAgente(
   };
 
   try {
-    const propostas = await agente.executar({ db, produtoId, alvoId, gerar });
+    const propostas = await agente.executar({ db, produtoId, alvoId, params, gerar });
 
     const inserir = db.prepare(
       `INSERT INTO sugestao (execucao_id, produto_id, tipo, alvo_tabela, alvo_id, payload, resumo, insumos, criada_em)

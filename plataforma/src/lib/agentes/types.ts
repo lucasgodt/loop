@@ -46,6 +46,8 @@ export interface ContextoAgente {
   produtoId: number;
   /** Alvo específico quando o agente roda sobre uma entidade (ex.: lancamento). */
   alvoId?: number;
+  /** Parâmetros extras do disparo (ex.: persona escolhida no formulário). */
+  params?: Record<string, unknown>;
   gerar: GerarEstruturado;
 }
 
