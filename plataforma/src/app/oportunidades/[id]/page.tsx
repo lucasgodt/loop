@@ -320,12 +320,20 @@ export default async function DetalheOportunidade({
                   <li key={s.id} className="flex items-center justify-between gap-2">
                     <Link
                       href={`/solucoes/${s.id}`}
-                      className="text-sm font-semibold hover:text-accent"
+                      className="text-sm font-semibold underline decoration-line decoration-dotted underline-offset-4 hover:text-accent hover:decoration-accent"
                     >
                       {s.titulo}
                     </Link>
-                    <span className={`badge ${TOM_SOLUCAO[s.estado] ?? "bg-line/60 text-muted"}`}>
-                      {s.estado.replace(/_/g, " ")}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <span className={`badge ${TOM_SOLUCAO[s.estado] ?? "bg-line/60 text-muted"}`}>
+                        {s.estado.replace(/_/g, " ")}
+                      </span>
+                      <Link
+                        href={`/solucoes/${s.id}`}
+                        className="font-mono text-xs text-accent hover:underline"
+                      >
+                        abrir →
+                      </Link>
                     </span>
                   </li>
                 ))}

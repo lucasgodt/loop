@@ -782,6 +782,15 @@ export async function aceitarSugestao(fd: FormData) {
     ];
     if (rota) revalidatePath(`${rota}/${sugestao.alvo_id}`);
   }
+
+  // Aceitar a comparação = "vamos aprofundar NESTA": cai direto na página da
+  // solução escolhida, com o story map e as suposições recém-gravados na tela.
+  const aplicada = db
+    .prepare("SELECT tipo, estado, entidade_criada_id FROM sugestao WHERE id = ?")
+    .get(id) as { tipo: string; estado: string; entidade_criada_id: number | null } | undefined;
+  if (aplicada?.tipo === "comparar_solucoes" && aplicada.estado === "aceita" && aplicada.entidade_criada_id) {
+    redirect(`/solucoes/${aplicada.entidade_criada_id}`);
+  }
 }
 
 /** Botão "preparar entrevista": gera o roteiro story-based como sugestão. */
