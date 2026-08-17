@@ -112,6 +112,95 @@ const LISTA: Conselheiro[] = [
       },
     ],
   },
+  {
+    topico: "jornada",
+    rotulo: "Conselheiro de jornada",
+    convite:
+      "Pense comigo a jornada de uma persona por vez: o que ela faz, na ordem, para extrair valor da Mooney? As entrevistas e sinais já estão na conversa — o que não veio da escuta é hipótese, e tudo bem, desde que a gente saiba.",
+    arquivoPrompt: "conselheiro-jornada.md",
+    contexto(produtoId) {
+      return {
+        ...contextoBase(produtoId),
+        jornadas_atuais: db
+          .prepare(
+            `SELECT COALESCE(pe.nome, 'Geral') AS persona, pj.ordem, pj.titulo, pj.descricao
+             FROM passo_jornada pj LEFT JOIN persona pe ON pe.id = pj.persona_id
+             WHERE pj.produto_id = ? ORDER BY pe.nome, pj.ordem`
+          )
+          .all(produtoId),
+        oportunidades_penduradas_na_jornada: db
+          .prepare(
+            `SELECT o.titulo, pj.titulo AS passo, COALESCE(pe.nome, 'Geral') AS persona
+             FROM oportunidade o
+             JOIN passo_jornada pj ON pj.id = o.passo_jornada_id
+             LEFT JOIN persona pe ON pe.id = o.persona_id
+             WHERE o.produto_id = ?`
+          )
+          .all(produtoId),
+        entrevistas_ouvidas: db
+          .prepare(
+            `SELECT e.data, e.entrevistado, pe.nome AS persona, e.historia, e.notas
+             FROM entrevista e LEFT JOIN persona pe ON pe.id = e.persona_id
+             WHERE e.produto_id = ? ORDER BY e.data DESC LIMIT 10`
+          )
+          .all(produtoId),
+        sinais_recentes: db
+          .prepare(
+            "SELECT canal, conteudo, status FROM sinal WHERE produto_id = ? ORDER BY id DESC LIMIT 20"
+          )
+          .all(produtoId),
+      };
+    },
+    ferramentas: [
+      {
+        nome: "propor_jornada",
+        descricao:
+          "Propõe passos de jornada para UMA persona (adiciona aos existentes, nunca substitui). A proposta vira um card que o PM aceita ou rejeita — nunca cria direto.",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["persona", "passos", "justificativa"],
+          properties: {
+            persona: {
+              type: "string",
+              description:
+                "nome exato de uma persona do contexto, ou 'Geral' para a jornada sem persona",
+            },
+            passos: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["titulo", "descricao"],
+                properties: {
+                  titulo: { type: "string", description: "verbo da persona, ex.: 'Descobre o app na formação'" },
+                  descricao: { type: "string", description: "1 frase — o que acontece e onde dói" },
+                },
+              },
+            },
+            justificativa: {
+              type: "string",
+              description: "1–2 frases: de onde cada trecho veio (entrevista/sinal) e o que é hipótese",
+            },
+          },
+        },
+        aoChamar(produtoId, execucaoId, args) {
+          const passos = (args.passos as { titulo: string }[]) ?? [];
+          db.prepare(
+            `INSERT INTO sugestao (execucao_id, produto_id, tipo, alvo_tabela, alvo_id, payload, resumo, criada_em)
+             VALUES (?, ?, 'criar_jornada', 'passo_jornada', NULL, ?, ?, ?)`
+          ).run(
+            execucaoId,
+            produtoId,
+            JSON.stringify(args),
+            `Jornada proposta na conversa: ${args.persona} (${passos.length} passos)`,
+            agora()
+          );
+          return `📋 Preenchi a proposta da jornada de ${args.persona} com ${passos.length} passo(s) — o card está logo abaixo da conversa, na página de oportunidades. Aceite para criar (passos são adicionados, nunca substituem os existentes) ou rejeite com o motivo.`;
+        },
+      },
+    ],
+  },
 ];
 
 export const CONSELHEIROS: ReadonlyMap<string, Conselheiro> = new Map(

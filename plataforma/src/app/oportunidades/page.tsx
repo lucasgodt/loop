@@ -5,6 +5,8 @@ import {
   criarSolucao,
   mudarEstadoOportunidade,
 } from "@/app/actions";
+import { Conversa } from "@/app/conversa";
+import { CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar } from "@/app/ui";
 import { ArvoreVisual } from "./arvore";
 import {
@@ -12,6 +14,7 @@ import {
   getPassosJornada,
   getPersonas,
   getProduto,
+  sugestoesPendentesDoTipo,
   type Oportunidade,
 } from "@/lib/queries";
 
@@ -247,6 +250,12 @@ export default async function Oportunidades({
             <button className="btn-ghost" type="submit">+ passo</button>
           </form>
         </div>
+
+        <Conversa produtoId={produto.id} topico="jornada" volta="/oportunidades" />
+
+        {sugestoesPendentesDoTipo(produto.id, "criar_jornada").map((s) => (
+          <CardSugestao key={s.id} sugestao={s} />
+        ))}
       </section>
     </div>
   );

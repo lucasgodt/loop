@@ -310,6 +310,49 @@ export function aplicarSugestao(
         break;
       }
 
+      // Conselheiro de jornada: passos propostos na conversa são ADICIONADOS
+      // à jornada da persona — nunca substituem (oportunidades penduram neles).
+      case "criar_jornada": {
+        const nomePersona = String(p.persona ?? "").trim();
+        let personaId: number | null = null;
+        if (nomePersona && nomePersona.toLowerCase() !== "geral") {
+          const existente = db
+            .prepare("SELECT id FROM persona WHERE produto_id = ? AND nome = ? COLLATE NOCASE")
+            .get(sugestao.produto_id, nomePersona) as { id: number } | undefined;
+          personaId =
+            existente?.id ??
+            Number(
+              db
+                .prepare("INSERT INTO persona (produto_id, nome) VALUES (?, ?)")
+                .run(sugestao.produto_id, nomePersona).lastInsertRowid
+            );
+        }
+        const jaExistem = new Set(
+          (
+            db
+              .prepare(
+                "SELECT titulo FROM passo_jornada WHERE produto_id = ? AND persona_id IS ?"
+              )
+              .all(sugestao.produto_id, personaId) as { titulo: string }[]
+          ).map((r) => r.titulo.trim().toLowerCase())
+        );
+        let ordem = (
+          db
+            .prepare(
+              "SELECT COALESCE(MAX(ordem), 0) AS m FROM passo_jornada WHERE produto_id = ? AND persona_id IS ?"
+            )
+            .get(sugestao.produto_id, personaId) as { m: number }
+        ).m;
+        for (const passo of p.passos as { titulo: string; descricao: string }[]) {
+          if (jaExistem.has(passo.titulo.trim().toLowerCase())) continue;
+          ordem += 1;
+          db.prepare(
+            "INSERT INTO passo_jornada (produto_id, persona_id, ordem, titulo, descricao) VALUES (?, ?, ?, ?, ?)"
+          ).run(sugestao.produto_id, personaId, ordem, passo.titulo, passo.descricao ?? "");
+        }
+        break;
+      }
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

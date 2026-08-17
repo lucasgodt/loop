@@ -243,6 +243,32 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
         </Shell>
       );
 
+    case "criar_jornada": {
+      const passos = p.passos as { titulo: string; descricao: string }[];
+      return (
+        <Shell titulo="💬 Jornada proposta na conversa" sugestao={sugestao}>
+          <p className="mt-2 text-sm font-semibold">{String(p.persona)}</p>
+          <ol className="mt-1 space-y-1">
+            {passos.map((passo, i) => (
+              <li key={i} className="text-sm">
+                <span className="font-mono text-xs text-muted">{i + 1}.</span>{" "}
+                <span className="font-semibold">{passo.titulo}</span>
+                {passo.descricao && <span className="text-muted"> — {passo.descricao}</span>}
+              </li>
+            ))}
+          </ol>
+          {!!p.justificativa && (
+            <p className="mt-2 text-xs text-muted">de onde veio: {String(p.justificativa)}</p>
+          )}
+          <Rodape
+            sugestao={sugestao}
+            rotuloAceitar="Aceitar — criar os passos"
+            nota="passos são adicionados à jornada da persona, nunca substituem"
+          />
+        </Shell>
+      );
+    }
+
     default:
       return (
         <Shell titulo="🤖 Sugestão do agente" sugestao={sugestao}>
