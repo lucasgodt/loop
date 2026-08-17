@@ -60,7 +60,9 @@ npm run atualizar   # mede todas as métricas com fonte e imprime pendências
 # agendar: crontab -e →  0 7 * * 1  cd <pasta> && npm run atualizar
 ```
 
-A construir: Linear, transcrição de gravações, múltiplos produtos.
+A construir: Linear, transcrição de gravações, múltiplos produtos e — por último,
+com a plataforma completa — o **onboarding guiado** (checklist auto-detectado na
+home seguindo a ordem do loop; ver a fase final em ../plataforma.md).
 
 ## Agentes de IA (fase 1 — ver ../agentes.md)
 

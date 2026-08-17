@@ -404,9 +404,32 @@ como válvulas de escape para o que o PostHog não cobre.
 O agendamento também é desacoplado: `npm run atualizar` roda tudo e imprime o
 digest de pendências — quem chama é o cron/launchd, não o app.
 
-**Depois:** sincronização com Linear · transcrição de gravações · visualização
-gráfica da árvore · assistência de IA (sugestão de oportunidades e suposições) ·
-suporte real a múltiplos produtos.
+**Depois:** sincronização com Linear · transcrição de gravações · assistência de IA
+(fases restantes de ../agentes.md) · suporte real a múltiplos produtos.
+
+**Fase final — Onboarding guiado** (pedido do Lucas; construir depois de tudo, quando
+a plataforma estiver completa): da plataforma vazia ao loop rodando em ~15 minutos.
+
+- **Forma: checklist persistente na home**, não um wizard modal — cada item linka
+  para a tela certa e se marca **sozinho por auto-detecção** (a query correspondente
+  retorna dado), nunca por clique. Sem estado de onboarding separado que
+  dessincroniza; um `onboarding_dispensado` no produto esconde quando concluir.
+- **A ordem do checklist é a ordem do loop** — configurar já ensina o método:
+  1. Workspace: nome, descrição e personas do produto
+  2. A métrica de negócio nº 1 (lagging) — por onde tudo começa
+  3. Jornada mínima de uma persona (3+ passos — o esqueleto da árvore)
+  4. Fonte padrão plugada (PostHog) + contexto de dados do produto
+  5. Chave de IA configurada (opcional — habilita os agentes)
+  6. Primeiro insumo triado (ou primeiro sinal registrado)
+  7. Primeira oportunidade na árvore, com evidência
+  8. Primeira ficha de lançamento (ou rascunhada pelo Fechador de Loop)
+  9. Primeira entrevista da semana (acende o streak)
+- **Educação embutida**: cada item carrega 1–2 frases do método explicando por que
+  essa ordem importa (lagging → escuta → árvore → medição).
+- **Por produto**: um segundo workspace no futuro passa pelo mesmo onboarding —
+  é também o teste de que nada da Mooney ficou hardcoded.
+- **Evolução**: "configurar conversando" — um agente de onboarding que entrevista o
+  PM sobre o produto e preenche workspace/personas/jornada como sugestões.
 
 ## Decisões em aberto
 
