@@ -7,6 +7,8 @@ import {
   medirMetrica,
   registrarValorMetrica,
 } from "@/app/actions";
+import { Conversa } from "@/app/conversa";
+import { CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
 import {
   getFontes,
@@ -14,6 +16,7 @@ import {
   getMetricas,
   getProduto,
   lancamentosDaMetrica,
+  sugestoesPendentesDoTipo,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -42,9 +45,15 @@ export default async function Metricas({
 
       {erro && (
         <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
-          Falha na medição: {erro}
+          Falha: {erro}
         </div>
       )}
+
+      <Conversa produtoId={produto.id} topico="metricas" volta="/metricas" />
+
+      {sugestoesPendentesDoTipo(produto.id, "criar_metrica").map((s) => (
+        <CardSugestao key={s.id} sugestao={s} />
+      ))}
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         {metricas.map((m) => {

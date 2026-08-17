@@ -281,6 +281,35 @@ export function aplicarSugestao(
       case "brief_solucao":
         break;
 
+      // Conselheiro de métricas: a proposta da conversa vira métrica de
+      // negócio — mesmo nome atualiza em vez de duplicar (ajuste conversado).
+      case "criar_metrica": {
+        const nome = extras.tituloOverride?.trim() || String(p.nome);
+        const existente = db
+          .prepare("SELECT id FROM metrica_negocio WHERE produto_id = ? AND nome = ?")
+          .get(sugestao.produto_id, nome) as { id: number } | undefined;
+        if (existente) {
+          db.prepare(
+            "UPDATE metrica_negocio SET definicao = ?, unidade = ?, meta = ? WHERE id = ?"
+          ).run(String(p.definicao ?? ""), String(p.unidade ?? ""), String(p.meta ?? ""), existente.id);
+          entidadeCriadaId = existente.id;
+        } else {
+          const info = db
+            .prepare(
+              "INSERT INTO metrica_negocio (produto_id, nome, definicao, fonte, unidade, meta) VALUES (?, ?, ?, '', ?, ?)"
+            )
+            .run(
+              sugestao.produto_id,
+              nome,
+              String(p.definicao ?? ""),
+              String(p.unidade ?? ""),
+              String(p.meta ?? "")
+            );
+          entidadeCriadaId = Number(info.lastInsertRowid);
+        }
+        break;
+      }
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

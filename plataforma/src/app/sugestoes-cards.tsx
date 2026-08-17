@@ -219,6 +219,30 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
       );
     }
 
+    case "criar_metrica":
+      return (
+        <Shell titulo="💬 Métrica proposta na conversa" sugestao={sugestao}>
+          <p className="mt-2 text-sm font-semibold">{String(p.nome)}</p>
+          <dl className="mt-1 space-y-1 text-sm">
+            <div><dt className="lbl">Definição</dt><dd>{String(p.definicao)}</dd></div>
+            <div className="flex gap-6">
+              <span><span className="lbl">Unidade</span> {String(p.unidade)}</span>
+              <span><span className="lbl">Meta</span> {String(p.meta)}</span>
+            </div>
+            {!!p.justificativa && (
+              <div><dt className="lbl">Por quê</dt><dd className="text-muted">{String(p.justificativa)}</dd></div>
+            )}
+          </dl>
+          <Rodape
+            sugestao={sugestao}
+            rotuloAceitar="Aceitar — criar a métrica"
+            comTituloOverride
+            tituloAtual={String(p.nome)}
+            nota="mesmo nome de uma existente atualiza em vez de duplicar"
+          />
+        </Shell>
+      );
+
     default:
       return (
         <Shell titulo="🤖 Sugestão do agente" sugestao={sugestao}>

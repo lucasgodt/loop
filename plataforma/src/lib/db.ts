@@ -251,6 +251,26 @@ CREATE TABLE IF NOT EXISTS agente_config (
   UNIQUE (produto_id, agente_id)
 );
 
+-- Conversas com os conselheiros: chat multi-turno por tópico do loop (uma
+-- conversa por tópico por produto). Diferente de sugestão: aqui a IA pensa
+-- junto — a decisão continua sendo registrada nas telas do método.
+CREATE TABLE IF NOT EXISTS conversa (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  topico TEXT NOT NULL,
+  criada_em TEXT NOT NULL,
+  UNIQUE (produto_id, topico)
+);
+
+-- papel: user | assistant (mapeia direto para a API do provedor)
+CREATE TABLE IF NOT EXISTS mensagem_conversa (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversa_id INTEGER NOT NULL REFERENCES conversa(id),
+  papel TEXT NOT NULL,
+  conteudo TEXT NOT NULL,
+  criada_em TEXT NOT NULL
+);
+
 -- Onde vive o código do produto. O agente executor trabalha SEMPRE num
 -- worktree isolado a partir da branch_base — nunca no checkout do dono,
 -- nunca com push na branch principal. instrucoes = convenções fixas do repo.

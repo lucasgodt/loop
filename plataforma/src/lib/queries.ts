@@ -533,6 +533,15 @@ export function sugestoesPendentes(produtoId: number): Sugestao[] {
     .all(produtoId) as Sugestao[];
 }
 
+/** Pendentes de um tipo sem alvo específico (ex.: métricas propostas em conversa). */
+export function sugestoesPendentesDoTipo(produtoId: number, tipo: string): Sugestao[] {
+  return db
+    .prepare(
+      "SELECT * FROM sugestao WHERE produto_id = ? AND tipo = ? AND estado = 'sugerida' ORDER BY id"
+    )
+    .all(produtoId, tipo) as Sugestao[];
+}
+
 /** Todas as sugestões pendentes de um alvo — os botões sob demanda podem gerar várias. */
 export function sugestoesPendentesParaAlvo(alvoTabela: string, alvoId: number): Sugestao[] {
   return db

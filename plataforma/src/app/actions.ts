@@ -865,6 +865,93 @@ export async function processarInsumo(fd: FormData) {
   }
 }
 
+// ── Conselheiros: chat por passo do loop ─────────────────────────────────────
+
+/** Envia uma mensagem ao conselheiro do tópico e grava a resposta (e ações). */
+export async function conversarSobre(fd: FormData) {
+  const produtoId = Number(fd.get("produto_id"));
+  const topico = texto(fd, "topico");
+  const mensagem = texto(fd, "mensagem");
+  const volta = texto(fd, "volta") || "/";
+  if (!mensagem) return;
+
+  const { conversaDoTopico, getConselheiro, JANELA_CONVERSA, mensagensDaConversa, montarSistema } =
+    await import("@/lib/conselheiros");
+  const { conversar } = await import("@/lib/agentes/cliente-ia");
+
+  const conselheiro = getConselheiro(topico);
+  const conversaId = conversaDoTopico(produtoId, topico);
+  db.prepare(
+    "INSERT INTO mensagem_conversa (conversa_id, papel, conteudo, criada_em) VALUES (?, 'user', ?, ?)"
+  ).run(conversaId, mensagem, agora());
+
+  const historico = mensagensDaConversa(conversaId)
+    .slice(-JANELA_CONVERSA)
+    .map((m) => ({ papel: m.papel, conteudo: m.conteudo }));
+
+  let resposta: Awaited<ReturnType<typeof conversar>>;
+  const inicio = agora();
+  try {
+    resposta = await conversar({
+      sistema: montarSistema(conselheiro, produtoId),
+      mensagens: historico,
+      ferramentas: conselheiro.ferramentas?.map((f) => ({
+        nome: f.nome,
+        descricao: f.descricao,
+        schema: f.schema,
+      })),
+    });
+  } catch (e) {
+    redirect(`${volta}?erro=` + encodeURIComponent(e instanceof Error ? e.message : String(e)));
+  }
+
+  // Auditoria de tokens no mesmo lugar de sempre; ferramentas penduram nela.
+  const exec = db
+    .prepare(
+      `INSERT INTO execucao_agente (produto_id, agente_id, gatilho, modelo, status, tokens_entrada, tokens_saida, iniciada_em, concluida_em)
+       VALUES (?, ?, 'conversa', ?, 'ok', ?, ?, ?, ?)`
+    )
+    .run(
+      produtoId,
+      `conselheiro_${topico}`,
+      resposta.modelo,
+      resposta.tokensEntrada,
+      resposta.tokensSaida,
+      inicio,
+      agora()
+    );
+
+  const gravarResposta = (conteudo: string) =>
+    db
+      .prepare(
+        "INSERT INTO mensagem_conversa (conversa_id, papel, conteudo, criada_em) VALUES (?, 'assistant', ?, ?)"
+      )
+      .run(conversaId, conteudo, agora());
+
+  if (resposta.texto.trim()) gravarResposta(resposta.texto.trim());
+  for (const chamada of resposta.chamadas) {
+    const ferramenta = conselheiro.ferramentas?.find((f) => f.nome === chamada.nome);
+    if (!ferramenta) continue;
+    gravarResposta(ferramenta.aoChamar(produtoId, Number(exec.lastInsertRowid), chamada.argumentos));
+  }
+
+  tudoMudou();
+  revalidatePath(volta);
+}
+
+export async function limparConversa(fd: FormData) {
+  const conversa = db
+    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ?")
+    .get(Number(fd.get("produto_id")), texto(fd, "topico")) as { id: number } | undefined;
+  if (conversa) {
+    db.transaction(() => {
+      db.prepare("DELETE FROM mensagem_conversa WHERE conversa_id = ?").run(conversa.id);
+      db.prepare("DELETE FROM conversa WHERE id = ?").run(conversa.id);
+    })();
+  }
+  revalidatePath(texto(fd, "volta") || "/");
+}
+
 // ── Agente executor: repositórios e PRs ──────────────────────────────────────
 
 export async function criarRepositorio(fd: FormData) {

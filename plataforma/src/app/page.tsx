@@ -80,7 +80,9 @@ export default function Home() {
                             ? "/sinais"
                             : s.tipo === "roteiro_entrevista"
                               ? "/entrevistas"
-                              : "/"
+                              : s.tipo === "criar_metrica"
+                                ? "/metricas"
+                                : "/"
                   }
                   className="hover:text-accent"
                 >

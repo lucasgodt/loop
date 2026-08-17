@@ -265,6 +265,25 @@ Peças:
   via PR" na solução (usa o brief do Empacotador como instrução; sem brief, o
   story map).
 
+## Conselheiros — a IA que pensa junto (não a que propõe ação)
+
+Terceira natureza de ajuda, ao lado dos agentes (propõem sugestões) e do
+executor (propõe PRs): **chat multi-turno por passo do loop**, persistido (uma
+conversa por tópico por produto), com o contexto do workspace injetado no
+sistema — o PM não se apresenta, conversa por cima do que a plataforma já sabe.
+A conversa não grava nada no método; quando o PM pede ("preenche pra mim"), o
+conselheiro usa uma **ferramenta** cuja saída é uma SUGESTÃO com card
+aceitar/rejeitar — o guardrail é o mesmo de sempre.
+
+Infra: tabelas `conversa`/`mensagem_conversa`, `conversar()` no cliente-ia
+(chat + tools), registro plugável em `src/lib/conselheiros.ts` (tópico + prompt
++ contexto + ferramentas), componente `<Conversa>` reutilizável. Plugar um
+conselheiro novo = 1 entrada no registro + 1 prompt + o card na página do passo.
+
+Construídos: **metricas** (passo 1 — opinião sobre a lagging nº 1, armadilhas
+B2B2C escolar; ferramenta propor_metrica com upsert por nome). Planejados sob
+demanda do Lucas, um por passo do loop.
+
 ## Ordem de construção (alívio de carga ÷ esforço)
 
 | Fase | O quê | Por quê primeiro |
