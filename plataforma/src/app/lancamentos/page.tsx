@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { criarLancamento } from "@/app/actions";
+import { apagarLancamento, criarLancamento } from "@/app/actions";
+import { Apagar } from "@/app/ui";
 import { dividasDeMedicao, getLancamentos, getProduto, getRevisoes } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -46,28 +47,30 @@ export default function Lancamentos() {
           const revisoes = getRevisoes(l.id);
           const feitas = revisoes.filter((r) => r.data_realizada).length;
           return (
-            <li key={l.id}>
-              <Link href={`/lancamentos/${l.id}`} className="card block transition hover:border-accent">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold">{l.nome}</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {l.veredito ? (
-                      <span className={`badge ${TOM_VEREDITO[l.veredito]}`}>{l.veredito}</span>
-                    ) : pendencias.length > 0 ? (
-                      pendencias.map((p) => (
-                        <span key={p} className="badge bg-danger-soft text-danger">{p}</span>
-                      ))
-                    ) : (
-                      <span className="badge bg-accent-soft text-accent">
-                        em medição · revisões {feitas}/{revisoes.length || "—"}
-                      </span>
-                    )}
-                  </div>
+            <li key={l.id} className="card transition hover:border-accent">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link href={`/lancamentos/${l.id}`} className="font-semibold hover:text-accent">
+                  {l.nome}
+                </Link>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {l.veredito ? (
+                    <span className={`badge ${TOM_VEREDITO[l.veredito]}`}>{l.veredito}</span>
+                  ) : pendencias.length > 0 ? (
+                    pendencias.map((p) => (
+                      <span key={p} className="badge bg-danger-soft text-danger">{p}</span>
+                    ))
+                  ) : (
+                    <span className="badge bg-accent-soft text-accent">
+                      em medição · revisões {feitas}/{revisoes.length || "—"}
+                    </span>
+                  )}
+                  <Apagar action={apagarLancamento} id={l.id} />
                 </div>
-                <div className="mt-1 font-mono text-xs text-muted">
-                  {l.data_lancamento ? `lançado em ${l.data_lancamento}` : "sem data de lançamento"}
-                  {l.metrica_primaria ? ` · ${l.metrica_primaria}` : ""}
-                </div>
+              </div>
+              <Link href={`/lancamentos/${l.id}`} className="mt-1 block font-mono text-xs text-muted hover:text-accent">
+                {l.data_lancamento ? `lançado em ${l.data_lancamento}` : "sem data de lançamento"}
+                {l.metrica_primaria ? ` · ${l.metrica_primaria}` : ""}
+                {" · abrir ficha →"}
               </Link>
             </li>
           );

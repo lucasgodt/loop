@@ -528,6 +528,10 @@ export async function apagarLancamento(fd: FormData) {
   const id = Number(fd.get("id"));
   db.transaction(() => {
     db.prepare("DELETE FROM revisao WHERE lancamento_id = ?").run(id);
+    // Sugestões e tarefas de PR do lançamento morrem junto — órfãs virariam
+    // links quebrados na home.
+    db.prepare("DELETE FROM sugestao WHERE alvo_tabela = 'lancamento' AND alvo_id = ?").run(id);
+    db.prepare("DELETE FROM tarefa_pr WHERE origem_tabela = 'lancamento' AND origem_id = ?").run(id);
     db.prepare("DELETE FROM lancamento WHERE id = ?").run(id);
   })();
   tudoMudou();
