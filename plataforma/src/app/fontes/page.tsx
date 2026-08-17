@@ -1,7 +1,16 @@
-import { apagarFonte, atualizarContextoProduto, atualizarFonte, criarFonte } from "@/app/actions";
+import {
+  apagarFonte,
+  apagarRepositorio,
+  atualizarContextoProduto,
+  atualizarFonte,
+  atualizarRepositorio,
+  criarFonte,
+  criarRepositorio,
+} from "@/app/actions";
 import { Apagar, Editar } from "@/app/ui";
+import { EXECUTORES } from "@/lib/executores";
 import { PROVEDORES } from "@/lib/fontes";
-import { getFontes, getProduto, usosDaFonte } from "@/lib/queries";
+import { getFontes, getProduto, getRepositorios, usosDaFonte } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +139,106 @@ export default async function Fontes({
           <code className="font-mono">bq query</code>) e serve principalmente para
           baselines históricas de antes da instrumentação.
         </p>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="lbl">Repositórios — onde vive o código (para os PRs do agente)</h2>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          Com um repositório plugado, os botões <strong>via PR</strong> aparecem na ficha
+          do lançamento (instrumentação) e na solução (implementação). O agente trabalha
+          num worktree isolado, abre branch própria e propõe um PR pelo{" "}
+          <code className="font-mono text-xs">gh</code> —{" "}
+          <strong>mergear é sempre decisão sua, no GitHub</strong>.
+        </p>
+        <ul className="space-y-3">
+          {getRepositorios(produto.id).map((r) => (
+            <li key={r.id} className="card">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold">{r.nome}</span>
+                <div className="flex items-center gap-2">
+                  <span className="badge bg-accent-soft text-accent">{r.executor}</span>
+                  <span className="badge bg-line/60 text-muted">base: {r.branch_base}</span>
+                  <Apagar action={apagarRepositorio} id={r.id} />
+                </div>
+              </div>
+              <p className="mt-1 break-all font-mono text-xs text-muted">{r.caminho_local}</p>
+              <div className="mt-2">
+                <Editar>
+                  <form action={atualizarRepositorio} className="grid grid-cols-1 gap-2">
+                    <input type="hidden" name="id" value={r.id} />
+                    <div className="flex flex-wrap gap-2">
+                      <input name="nome" defaultValue={r.nome} required className="field flex-1" />
+                      <input name="branch_base" defaultValue={r.branch_base} className="field w-32" />
+                      <select name="executor" defaultValue={r.executor} className="field w-auto">
+                        {[...EXECUTORES.values()].map((e) => (
+                          <option key={e.tipo} value={e.tipo}>{e.rotulo}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <input name="caminho_local" defaultValue={r.caminho_local} className="field font-mono text-xs" />
+                    <textarea
+                      name="instrucoes"
+                      rows={3}
+                      defaultValue={r.instrucoes}
+                      className="field font-mono text-xs"
+                      placeholder="convenções do repo que todo PR deve seguir"
+                    />
+                    <div className="flex justify-end">
+                      <button className="btn-ghost" type="submit">Salvar</button>
+                    </div>
+                  </form>
+                </Editar>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <form action={criarRepositorio} className="card mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <input type="hidden" name="produto_id" value={produto.id} />
+          <div className="md:col-span-3">
+            <h3 className="lbl">Plugar repositório</h3>
+          </div>
+          <div>
+            <label className="lbl" htmlFor="r-nome">Nome</label>
+            <input id="r-nome" name="nome" required className="field" placeholder="ex.: app Mooney" />
+          </div>
+          <div>
+            <label className="lbl" htmlFor="r-branch">Branch base</label>
+            <input id="r-branch" name="branch_base" className="field" placeholder="main" />
+          </div>
+          <div>
+            <label className="lbl" htmlFor="r-executor">Executor de código</label>
+            <select id="r-executor" name="executor" className="field">
+              {[...EXECUTORES.values()].map((e) => (
+                <option key={e.tipo} value={e.tipo}>
+                  {e.rotulo}{e.disponivel() ? "" : " (não instalado)"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-3">
+            <label className="lbl" htmlFor="r-caminho">Caminho local do clone (com remote no GitHub)</label>
+            <input
+              id="r-caminho"
+              name="caminho_local"
+              required
+              className="field font-mono text-xs"
+              placeholder="/Users/você/projetos/app-mooney"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <label className="lbl" htmlFor="r-instrucoes">Convenções do repo (vão em todo PR)</label>
+            <textarea
+              id="r-instrucoes"
+              name="instrucoes"
+              rows={3}
+              className="field font-mono text-xs"
+              placeholder={"ex.: eventos PostHog nomeados entidade_acao; capture via lib/analytics.ts, nunca posthog direto; UI em pt-BR"}
+            />
+          </div>
+          <div className="md:col-span-3 flex justify-end">
+            <button className="btn" type="submit">Plugar repositório</button>
+          </div>
+        </form>
       </section>
 
       <section className="mt-8">

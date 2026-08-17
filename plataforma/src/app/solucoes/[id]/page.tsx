@@ -13,6 +13,7 @@ import {
   criarTeste,
   mudarEstadoSolucao,
 } from "@/app/actions";
+import { BlocoPr } from "@/app/pr-card";
 import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
@@ -162,6 +163,16 @@ export default async function DetalheSolucao({
       {pendentes.map((p) => (
         <CardSugestao key={p.id} sugestao={p} />
       ))}
+
+      <BlocoPr
+        produtoId={s.produto_id}
+        origemTabela="solucao"
+        origemId={s.id}
+        volta={volta}
+        rotulo="🔧 Implementar via PR"
+        dica="usa o brief do Empacotador (ou o story map) como instrução e abre um PR para você revisar"
+        habilitado={!bloqueada}
+      />
 
       {erro === "sem_ficha" && (
         <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">

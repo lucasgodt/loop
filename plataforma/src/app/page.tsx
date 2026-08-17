@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoopStrip } from "./loop-strip";
+import { ListaTarefasPr } from "./pr-card";
 import {
   altoRiscoSemTeste,
   diasDeAtraso,
@@ -13,6 +14,7 @@ import {
   revisoesAtrasadas,
   sinaisNovos,
   sugestoesPendentes,
+  tarefasPrVivas,
   testesAbertos,
 } from "@/lib/queries";
 
@@ -54,6 +56,8 @@ export default function Home() {
       </div>
       <h1 className="display mt-1 text-5xl font-medium">O que fazer agora.</h1>
       <LoopStrip />
+
+      <ListaTarefasPr tarefas={tarefasPrVivas(produto.id)} />
 
       {sugestoes.length > 0 && (
         <div className="card mt-6 border-accent">

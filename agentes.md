@@ -229,6 +229,42 @@ em camadas, como regra de sistema desde a fase 1:
    férias escolares em julho/dezembro mudam tudo).
 5. Veredito é sempre humano. Sempre.
 
+## Agente executor — PRs em nome do PM
+
+O passo além de sugerir: o agente escreve código e abre um Pull Request — para
+instrumentar as métricas do PostHog no lugar certo do produto, ou para
+implementar uma solução que saiu do funil. **O PR é a sugestão; mergear é o ato
+humano, no GitHub.** Não existe dial de aplicação aqui: não há "aplicar
+automático" possível por construção.
+
+Guardrails (valem independente da ferramenta plugada):
+
+1. O trabalho acontece num **git worktree isolado** criado a partir de
+   `origin/<branch base>` fresca — nunca no checkout do dono, nunca herdando o
+   que estava pendente lá.
+2. Branch própria `loop/pr-<id>`; **nunca** commit ou push na branch base.
+3. O **executor só edita arquivos**. Todo o git (worktree, branch, commit, push,
+   PR via `gh`) é do fluxo em `scripts/executar-pr.ts` — o executor plugado não
+   tem como furar a regra.
+4. Sem diff, sem PR. Falhou, vira card com log na página de origem.
+
+Peças:
+
+- **Executores plugáveis** (`src/lib/executores/`): mesmo padrão de fontes e
+  agentes — contrato `Executor { disponivel, executar(instrucoes, dir) }`.
+  Provedores: `claude-code` (headless, acceptEdits — edita arquivos, não roda
+  comandos) e `codex` (exec com sandbox workspace-write). Configurável por
+  repositório.
+- **Repositórios por produto** (tabela `repositorio`, UI em /fontes): caminho
+  local do clone, branch base, executor e convenções fixas que vão em todo PR.
+  Autenticação GitHub = o `gh` já logado na máquina; nenhum token na plataforma.
+- **Tarefas** (tabela `tarefa_pr`): fila → rodando → pr_aberto | falhou, com log
+  completo. A action dá spawn destacado do worker; a página mostra o estado.
+- **Botões**: "Instrumentar via PR" na ficha do lançamento (usa o plano de
+  instrumentação do Fechador — fecha o ciclo do padrão PostHog) e "Implementar
+  via PR" na solução (usa o brief do Empacotador como instrução; sem brief, o
+  story map).
+
 ## Ordem de construção (alívio de carga ÷ esforço)
 
 | Fase | O quê | Por quê primeiro |
@@ -239,7 +275,8 @@ em camadas, como regra de sistema desde a fase 1:
 | 3 (~2-3 dias) | Cadência de entrevistas pela via barata: roteiro + `transcricao` + síntese | Baixa o custo de cada entrevista que o Lucas já faz |
 | 4 (~1-2 dias) | `npm run agentes` + cron + regra do Vigia no atualizar | Só aqui considerar girar dials para automático, começando pelas ações aditivas/reversíveis |
 | 5 ✓ | Botões sob demanda: Redator de Avaliação, Provocador de Ideias, Agente de Risco, brief do Empacotador + veredito rascunhado pelo Fechador | Com WIP de 2, priorização/ideação acontecem poucas vezes ao mês. (Pesquisa de concorrência com web ficou para depois — exige outra infra de busca) |
-| 6 | Entrevistador público | **Só com o gatilho observável.** Nunca antes |
+| 6 ✓ | Agente executor: repositórios plugados + executores de código plugáveis + PRs via gh | Pedido do PM antes do onboarding; PR é o formato natural de sugestão para código |
+| 7 | Entrevistador público | **Só com o gatilho observável.** Nunca antes |
 
 ## Decisões em aberto
 

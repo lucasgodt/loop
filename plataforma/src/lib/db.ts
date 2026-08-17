@@ -250,6 +250,39 @@ CREATE TABLE IF NOT EXISTS agente_config (
   config TEXT NOT NULL DEFAULT '{}',
   UNIQUE (produto_id, agente_id)
 );
+
+-- Onde vive o código do produto. O agente executor trabalha SEMPRE num
+-- worktree isolado a partir da branch_base — nunca no checkout do dono,
+-- nunca com push na branch principal. instrucoes = convenções fixas do repo.
+CREATE TABLE IF NOT EXISTS repositorio (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  nome TEXT NOT NULL,
+  caminho_local TEXT NOT NULL,
+  branch_base TEXT NOT NULL DEFAULT 'main',
+  executor TEXT NOT NULL DEFAULT 'claude-code',
+  instrucoes TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL
+);
+
+-- Uma tarefa de PR: o trabalho de código que um agente executa em nome do PM.
+-- O PR é a sugestão — mergear é o ato humano, no GitHub. status: fila |
+-- rodando | pr_aberto | falhou
+CREATE TABLE IF NOT EXISTS tarefa_pr (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  repositorio_id INTEGER NOT NULL REFERENCES repositorio(id),
+  origem_tabela TEXT NOT NULL DEFAULT '',
+  origem_id INTEGER,
+  titulo TEXT NOT NULL,
+  instrucoes TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'fila',
+  branch TEXT NOT NULL DEFAULT '',
+  pr_url TEXT NOT NULL DEFAULT '',
+  log TEXT NOT NULL DEFAULT '',
+  criada_em TEXT NOT NULL,
+  concluida_em TEXT
+);
 `;
 
 // Migrações aditivas: colunas novas em tabelas que já existem em bancos criados

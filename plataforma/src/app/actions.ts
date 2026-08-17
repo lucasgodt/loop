@@ -824,6 +824,130 @@ export async function processarInsumo(fd: FormData) {
   }
 }
 
+// ── Agente executor: repositórios e PRs ──────────────────────────────────────
+
+export async function criarRepositorio(fd: FormData) {
+  const caminho = texto(fd, "caminho_local");
+  const { existsSync } = await import("node:fs");
+  if (!existsSync(`${caminho}/.git`)) {
+    redirect("/fontes?erro=" + encodeURIComponent(`${caminho} não é um repositório git`));
+  }
+  db.prepare(
+    "INSERT INTO repositorio (produto_id, nome, caminho_local, branch_base, executor, instrucoes, criada_em) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(
+    Number(fd.get("produto_id")),
+    texto(fd, "nome"),
+    caminho,
+    texto(fd, "branch_base") || "main",
+    texto(fd, "executor") || "claude-code",
+    texto(fd, "instrucoes"),
+    agora()
+  );
+  revalidatePath("/fontes");
+}
+
+export async function atualizarRepositorio(fd: FormData) {
+  db.prepare(
+    "UPDATE repositorio SET nome = ?, caminho_local = ?, branch_base = ?, executor = ?, instrucoes = ? WHERE id = ?"
+  ).run(
+    texto(fd, "nome"),
+    texto(fd, "caminho_local"),
+    texto(fd, "branch_base") || "main",
+    texto(fd, "executor") || "claude-code",
+    texto(fd, "instrucoes"),
+    Number(fd.get("id"))
+  );
+  revalidatePath("/fontes");
+}
+
+export async function apagarRepositorio(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("DELETE FROM tarefa_pr WHERE repositorio_id = ?").run(id);
+    db.prepare("DELETE FROM repositorio WHERE id = ?").run(id);
+  })();
+  revalidatePath("/fontes");
+}
+
+/**
+ * Botões "via PR": enfileira a tarefa e dispara o worker em background.
+ * O PR resultante é a sugestão — mergear é o ato humano, no GitHub.
+ */
+export async function abrirPr(fd: FormData) {
+  const produtoId = Number(fd.get("produto_id"));
+  const repositorioId = Number(fd.get("repositorio_id"));
+  const origemTabela = texto(fd, "origem_tabela");
+  const origemId = Number(fd.get("origem_id"));
+  const volta = texto(fd, "volta") || "/";
+
+  let titulo = "";
+  let instrucoes = "";
+  if (origemTabela === "lancamento") {
+    const l = db
+      .prepare("SELECT nome, hipotese, metrica_primaria, instrumentacao FROM lancamento WHERE id = ?")
+      .get(origemId) as
+      | { nome: string; hipotese: string; metrica_primaria: string; instrumentacao: string }
+      | undefined;
+    if (!l?.instrumentacao?.trim()) {
+      redirect(`${volta}?erro=` + encodeURIComponent("preencha o plano de instrumentação antes — é ele que vira o PR"));
+    }
+    titulo = `Instrumentar métricas: ${l.nome}`;
+    instrucoes = [
+      `Implemente o plano de instrumentação de métricas (PostHog) abaixo, disparando cada evento no lugar certo do produto.`,
+      "",
+      `Plano de instrumentação:\n${l.instrumentacao}`,
+      "",
+      l.hipotese ? `Contexto — hipótese do lançamento: ${l.hipotese}` : "",
+      l.metrica_primaria ? `Métrica primária que esses eventos alimentam: ${l.metrica_primaria}` : "",
+    ].join("\n");
+  } else if (origemTabela === "solucao") {
+    const s = db
+      .prepare("SELECT titulo, descricao FROM solucao WHERE id = ?")
+      .get(origemId) as { titulo: string; descricao: string } | undefined;
+    if (!s) redirect(`${volta}?erro=` + encodeURIComponent("solução não encontrada"));
+    // O brief do Empacotador é a melhor instrução; sem ele, título + descrição + story map.
+    const brief = db
+      .prepare(
+        `SELECT payload FROM sugestao WHERE tipo = 'brief_solucao' AND alvo_tabela = 'solucao'
+           AND alvo_id = ? AND estado IN ('aceita', 'sugerida') ORDER BY id DESC LIMIT 1`
+      )
+      .get(origemId) as { payload: string } | undefined;
+    titulo = `Implementar: ${s.titulo}`;
+    if (brief) {
+      instrucoes = `Implemente a solução descrita no brief abaixo.\n\n${(JSON.parse(brief.payload) as { brief_md: string }).brief_md}`;
+    } else {
+      const passos = db
+        .prepare("SELECT ordem, titulo FROM passo_story_map WHERE solucao_id = ? ORDER BY ordem")
+        .all(origemId) as { ordem: number; titulo: string }[];
+      instrucoes = [
+        `Implemente a solução "${s.titulo}".`,
+        s.descricao ? `\nDescrição: ${s.descricao}` : "",
+        passos.length
+          ? `\nStory map (o que o cliente faz):\n${passos.map((p) => `${p.ordem}. ${p.titulo}`).join("\n")}`
+          : "",
+      ].join("\n");
+    }
+  } else {
+    redirect(`${volta}?erro=` + encodeURIComponent("origem de PR desconhecida"));
+  }
+
+  const info = db
+    .prepare(
+      "INSERT INTO tarefa_pr (produto_id, repositorio_id, origem_tabela, origem_id, titulo, instrucoes, criada_em) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    )
+    .run(produtoId, repositorioId, origemTabela, origemId, titulo, instrucoes, agora());
+
+  const { spawn } = await import("node:child_process");
+  spawn("npx", ["tsx", "scripts/executar-pr.ts", String(info.lastInsertRowid)], {
+    cwd: process.cwd(),
+    detached: true,
+    stdio: "ignore",
+  }).unref();
+
+  tudoMudou();
+  revalidatePath(volta);
+}
+
 export async function rejeitarSugestao(fd: FormData) {
   db.prepare(
     "UPDATE sugestao SET estado = 'rejeitada', motivo_rejeicao = ? WHERE id = ? AND estado = 'sugerida'"

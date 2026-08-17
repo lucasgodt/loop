@@ -552,6 +552,64 @@ export function sugestaoPendentePara(alvoTabela: string, alvoId: number): Sugest
   );
 }
 
+// ── Agente executor: repositórios e tarefas de PR ────────────────────────────
+
+export interface Repositorio {
+  id: number;
+  produto_id: number;
+  nome: string;
+  caminho_local: string;
+  branch_base: string;
+  executor: string;
+  instrucoes: string;
+}
+
+export function getRepositorios(produtoId: number): Repositorio[] {
+  return db
+    .prepare("SELECT * FROM repositorio WHERE produto_id = ? ORDER BY id")
+    .all(produtoId) as Repositorio[];
+}
+
+export interface TarefaPr {
+  id: number;
+  produto_id: number;
+  repositorio_id: number;
+  repositorio_nome?: string;
+  origem_tabela: string;
+  origem_id: number | null;
+  titulo: string;
+  instrucoes: string;
+  status: string;
+  branch: string;
+  pr_url: string;
+  log: string;
+  criada_em: string;
+  concluida_em: string | null;
+}
+
+/** A tarefa de PR mais recente de um alvo (ficha de lançamento ou solução). */
+export function tarefaPrPara(origemTabela: string, origemId: number): TarefaPr | null {
+  return (
+    (db
+      .prepare(
+        "SELECT * FROM tarefa_pr WHERE origem_tabela = ? AND origem_id = ? ORDER BY id DESC LIMIT 1"
+      )
+      .get(origemTabela, origemId) as TarefaPr) ?? null
+  );
+}
+
+/** Tarefas vivas (na fila, rodando ou com PR aberto aguardando merge). */
+export function tarefasPrVivas(produtoId: number): TarefaPr[] {
+  return db
+    .prepare(
+      `SELECT t.*, r.nome AS repositorio_nome FROM tarefa_pr t
+       JOIN repositorio r ON r.id = t.repositorio_id
+       WHERE t.produto_id = ? AND t.status IN ('fila', 'rodando', 'pr_aberto')
+       ORDER BY t.id DESC`
+    )
+    .all(produtoId) as TarefaPr[];
+}
+
 export function usosDaFonte(fonteId: number): number {
   const m = db
     .prepare("SELECT COUNT(*) AS n FROM metrica_negocio WHERE fonte_dados_id = ?")

@@ -10,6 +10,7 @@ import {
   registrarRevisao,
   rejeitarSugestao,
 } from "@/app/actions";
+import { BlocoPr } from "@/app/pr-card";
 import { Apagar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import type { PayloadFicha, PayloadVeredito } from "@/lib/agentes/fechador-de-loop";
@@ -59,6 +60,16 @@ export default async function FichaLancamento({
       )}
 
       <RascunhoDoAgente lancamentoId={lancamento.id} produtoId={produto.id} temVeredito={!!lancamento.veredito} />
+
+      <BlocoPr
+        produtoId={produto.id}
+        origemTabela="lancamento"
+        origemId={lancamento.id}
+        volta={`/lancamentos/${lancamento.id}`}
+        rotulo="🔧 Instrumentar via PR"
+        dica="o agente implementa o plano de instrumentação no código e abre um PR para você revisar"
+        habilitado={!!lancamento.instrumentacao.trim()}
+      />
 
       <form action={atualizarLancamento} className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={lancamento.id} />
