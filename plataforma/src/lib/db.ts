@@ -254,12 +254,15 @@ CREATE TABLE IF NOT EXISTS agente_config (
 -- Conversas com os conselheiros: chat multi-turno por tópico do loop (uma
 -- conversa por tópico por produto). Diferente de sugestão: aqui a IA pensa
 -- junto — a decisão continua sendo registrada nas telas do método.
+-- alvo_id: 0 = conversa geral do tópico; senão, o id da entidade discutida
+-- (ex.: ideação é uma conversa POR oportunidade).
 CREATE TABLE IF NOT EXISTS conversa (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   produto_id INTEGER NOT NULL REFERENCES produto(id),
   topico TEXT NOT NULL,
+  alvo_id INTEGER NOT NULL DEFAULT 0,
   criada_em TEXT NOT NULL,
-  UNIQUE (produto_id, topico)
+  UNIQUE (produto_id, topico, alvo_id)
 );
 
 -- papel: user | assistant (mapeia direto para a API do provedor)
@@ -345,6 +348,29 @@ function open(): Database.Database {
     if (!existentes.some((c) => c.name === coluna)) {
       conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${ddl}`);
     }
+  }
+
+  // Migração única: conversa ganhou alvo_id no UNIQUE (conversa por entidade).
+  // Recriar preservando ids — FKs desligadas para o DROP+RENAME não quebrar a
+  // referência de mensagem_conversa.
+  const colunasConversa = conn.pragma("table_info(conversa)") as { name: string }[];
+  if (colunasConversa.length > 0 && !colunasConversa.some((c) => c.name === "alvo_id")) {
+    conn.pragma("foreign_keys = OFF");
+    conn.exec(`
+      CREATE TABLE conversa_nova (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto_id INTEGER NOT NULL REFERENCES produto(id),
+        topico TEXT NOT NULL,
+        alvo_id INTEGER NOT NULL DEFAULT 0,
+        criada_em TEXT NOT NULL,
+        UNIQUE (produto_id, topico, alvo_id)
+      );
+      INSERT INTO conversa_nova (id, produto_id, topico, alvo_id, criada_em)
+        SELECT id, produto_id, topico, 0, criada_em FROM conversa;
+      DROP TABLE conversa;
+      ALTER TABLE conversa_nova RENAME TO conversa;
+    `);
+    conn.pragma("foreign_keys = ON");
   }
   return conn;
 }

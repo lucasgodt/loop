@@ -33,16 +33,19 @@ export function FormConversa({
   topico,
   volta,
   placeholder,
+  alvoId = 0,
 }: {
   produtoId: number;
   topico: string;
   volta: string;
   placeholder: string;
+  alvoId?: number;
 }) {
   return (
     <form action={conversarSobre} className="mt-3 flex gap-2 border-t border-line pt-3">
       <input type="hidden" name="produto_id" value={produtoId} />
       <input type="hidden" name="topico" value={topico} />
+      <input type="hidden" name="alvo_id" value={alvoId} />
       <input type="hidden" name="volta" value={volta} />
       <Campos placeholder={placeholder} />
     </form>

@@ -13,10 +13,13 @@ export function Conversa({
   produtoId,
   topico,
   volta,
+  alvoId = 0,
 }: {
   produtoId: number;
   topico: string;
   volta: string;
+  /** > 0 quando a conversa é por entidade (ex.: ideação por oportunidade). */
+  alvoId?: number;
 }) {
   const conselheiro = getConselheiro(topico);
   if (!temChaveDeIA()) {
@@ -30,9 +33,11 @@ export function Conversa({
 
   // Só cria a linha da conversa quando a primeira mensagem chegar.
   const existente = db
-    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ?")
-    .get(produtoId, topico) as { id: number } | undefined;
-  const mensagens = existente ? mensagensDaConversa(conversaDoTopico(produtoId, topico)) : [];
+    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ? AND alvo_id = ?")
+    .get(produtoId, topico, alvoId) as { id: number } | undefined;
+  const mensagens = existente
+    ? mensagensDaConversa(conversaDoTopico(produtoId, topico, alvoId))
+    : [];
 
   return (
     <section className="card mt-6">
@@ -42,6 +47,7 @@ export function Conversa({
           <form action={limparConversa}>
             <input type="hidden" name="produto_id" value={produtoId} />
             <input type="hidden" name="topico" value={topico} />
+            <input type="hidden" name="alvo_id" value={alvoId} />
             <input type="hidden" name="volta" value={volta} />
             <button className="font-mono text-xs text-muted hover:text-danger" type="submit">
               recomeçar conversa
@@ -75,6 +81,7 @@ export function Conversa({
       <FormConversa
         produtoId={produtoId}
         topico={topico}
+        alvoId={alvoId}
         volta={volta}
         placeholder={
           mensagens.length === 0

@@ -10,6 +10,7 @@ import {
   salvarAvaliacao,
 } from "@/app/actions";
 import { BotaoPendente } from "@/app/botao-pendente";
+import { Conversa } from "@/app/conversa";
 import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
@@ -340,6 +341,8 @@ export default async function DetalheOportunidade({
           </div>
         </section>
       </div>
+
+      <Conversa produtoId={produto.id} topico="ideacao" alvoId={o.id} volta={volta} />
     </div>
   );
 }

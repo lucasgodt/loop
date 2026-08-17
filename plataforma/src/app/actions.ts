@@ -871,6 +871,7 @@ export async function processarInsumo(fd: FormData) {
 export async function conversarSobre(fd: FormData) {
   const produtoId = Number(fd.get("produto_id"));
   const topico = texto(fd, "topico");
+  const alvoId = inteiroOuNulo(fd, "alvo_id") ?? 0;
   const mensagem = texto(fd, "mensagem");
   const volta = texto(fd, "volta") || "/";
   if (!mensagem) return;
@@ -880,7 +881,7 @@ export async function conversarSobre(fd: FormData) {
   const { conversar } = await import("@/lib/agentes/cliente-ia");
 
   const conselheiro = getConselheiro(topico);
-  const conversaId = conversaDoTopico(produtoId, topico);
+  const conversaId = conversaDoTopico(produtoId, topico, alvoId);
 
   // Reenvio acidental (duplo clique/Enter na espera): mesma mensagem em <90s
   // não vira segunda rodada — o LLM já respondeu ou vai responder a primeira.
@@ -909,7 +910,7 @@ export async function conversarSobre(fd: FormData) {
   const inicio = agora();
   try {
     resposta = await conversar({
-      sistema: montarSistema(conselheiro, produtoId),
+      sistema: montarSistema(conselheiro, produtoId, alvoId),
       mensagens: historico,
       ferramentas: conselheiro.ferramentas?.map((f) => ({
         nome: f.nome,
@@ -948,7 +949,31 @@ export async function conversarSobre(fd: FormData) {
   for (const chamada of resposta.chamadas) {
     const ferramenta = conselheiro.ferramentas?.find((f) => f.nome === chamada.nome);
     if (!ferramenta) continue;
-    gravarResposta(ferramenta.aoChamar(produtoId, Number(exec.lastInsertRowid), chamada.argumentos));
+    gravarResposta(
+      ferramenta.aoChamar(produtoId, Number(exec.lastInsertRowid), chamada.argumentos, alvoId)
+    );
+  }
+
+  // Rodada com ferramenta: o modelo tende a registrar a ação e deixar a fala
+  // pela metade (ou no ar). Uma chamada de seguimento — sem ferramentas —
+  // completa a resposta na conversa; se falhar, a confirmação acima já basta.
+  if (resposta.chamadas.length > 0) {
+    try {
+      const seguimento = await conversar({
+        sistema:
+          montarSistema(conselheiro, produtoId, alvoId) +
+          "\n\n## Agora\n\nA(s) ferramenta(s) da sua última resposta foram executadas e confirmadas na conversa. Complete o que você prometeu ou ficou devendo ao PM (ex.: as alternativas que ia listar), SEM repetir a confirmação da ferramenta e SEM chamar ferramentas. Se não ficou nada pendente, responda em 1 frase curta o próximo passo sugerido.",
+        mensagens: mensagensDaConversa(conversaId)
+          .slice(-JANELA_CONVERSA)
+          .map((m) => ({ papel: m.papel, conteudo: m.conteudo })),
+      });
+      if (seguimento.texto.trim()) gravarResposta(seguimento.texto.trim());
+      db.prepare(
+        "UPDATE execucao_agente SET tokens_entrada = tokens_entrada + ?, tokens_saida = tokens_saida + ? WHERE id = ?"
+      ).run(seguimento.tokensEntrada, seguimento.tokensSaida, Number(exec.lastInsertRowid));
+    } catch {
+      /* segue com a confirmação da ferramenta apenas */
+    }
   }
 
   tudoMudou();
@@ -957,8 +982,12 @@ export async function conversarSobre(fd: FormData) {
 
 export async function limparConversa(fd: FormData) {
   const conversa = db
-    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ?")
-    .get(Number(fd.get("produto_id")), texto(fd, "topico")) as { id: number } | undefined;
+    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ? AND alvo_id = ?")
+    .get(
+      Number(fd.get("produto_id")),
+      texto(fd, "topico"),
+      inteiroOuNulo(fd, "alvo_id") ?? 0
+    ) as { id: number } | undefined;
   if (conversa) {
     db.transaction(() => {
       db.prepare("DELETE FROM mensagem_conversa WHERE conversa_id = ?").run(conversa.id);

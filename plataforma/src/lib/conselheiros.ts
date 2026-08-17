@@ -23,7 +23,12 @@ export interface FerramentaConselheiro {
   nome: string;
   descricao: string;
   schema: Record<string, unknown>;
-  aoChamar(produtoId: number, execucaoId: number, args: Record<string, unknown>): string;
+  aoChamar(
+    produtoId: number,
+    execucaoId: number,
+    args: Record<string, unknown>,
+    alvoId: number
+  ): string;
 }
 
 export interface Conselheiro {
@@ -32,8 +37,11 @@ export interface Conselheiro {
   /** O convite mostrado quando a conversa ainda está vazia. */
   convite: string;
   arquivoPrompt: string;
-  /** O contexto dinâmico injetado no sistema a cada mensagem (sempre fresco). */
-  contexto(produtoId: number): unknown;
+  /**
+   * O contexto dinâmico injetado no sistema a cada mensagem (sempre fresco).
+   * alvoId > 0 quando a conversa é por entidade (ex.: ideação por oportunidade).
+   */
+  contexto(produtoId: number, alvoId: number): unknown;
   ferramentas?: FerramentaConselheiro[];
 }
 
@@ -201,6 +209,85 @@ const LISTA: Conselheiro[] = [
       },
     ],
   },
+  {
+    topico: "ideacao",
+    rotulo: "Conselheiro de ideação",
+    convite:
+      "Pense comigo as soluções desta oportunidade: as evidências já estão na conversa. Me conte sua primeira ideia — ou peça alternativas por mecanismos diferentes. Cada solução proposta vira um card que você aprova.",
+    arquivoPrompt: "conselheiro-ideacao.md",
+    contexto(produtoId, alvoId) {
+      return {
+        ...contextoBase(produtoId),
+        oportunidade: db
+          .prepare(
+            `SELECT o.titulo, o.notas, o.estado, pe.nome AS persona, pj.titulo AS passo_da_jornada
+             FROM oportunidade o
+             LEFT JOIN persona pe ON pe.id = o.persona_id
+             LEFT JOIN passo_jornada pj ON pj.id = o.passo_jornada_id
+             WHERE o.id = ? AND o.produto_id = ?`
+          )
+          .get(alvoId, produtoId),
+        avaliacao_de_priorizacao: db
+          .prepare(
+            "SELECT tamanho, tamanho_justif, companhia, companhia_justif, mercado, mercado_justif, cliente, cliente_justif, decisao FROM avaliacao_oportunidade WHERE oportunidade_id = ?"
+          )
+          .get(alvoId),
+        evidencias: db
+          .prepare(
+            `SELECT CASE WHEN ev.entrevista_id IS NOT NULL THEN 'entrevista' ELSE 'sinal' END AS tipo,
+                    COALESCE(e.historia || ' ' || e.notas, s.conteudo) AS conteudo
+             FROM evidencia ev
+             LEFT JOIN entrevista e ON e.id = ev.entrevista_id
+             LEFT JOIN sinal s ON s.id = ev.sinal_id
+             WHERE ev.oportunidade_id = ?`
+          )
+          .all(alvoId),
+        solucoes_ja_na_mesa: db
+          .prepare("SELECT titulo, descricao, estado FROM solucao WHERE oportunidade_id = ?")
+          .all(alvoId),
+      };
+    },
+    ferramentas: [
+      {
+        nome: "propor_solucao",
+        descricao:
+          "Propõe UMA solução candidata para esta oportunidade (chame mais de uma vez para várias). A proposta vira um card que o PM aprova ou rejeita — só conta para o portão das 3+ depois do aceite.",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["titulo", "descricao", "racional"],
+          properties: {
+            titulo: { type: "string" },
+            descricao: {
+              type: "string",
+              description: "2–3 frases, mecanismo concreto que um engenheiro entende",
+            },
+            racional: {
+              type: "string",
+              description: "por que atacaria a dor — cita evidência real da conversa",
+            },
+          },
+        },
+        aoChamar(produtoId, execucaoId, args, alvoId) {
+          const op = db
+            .prepare("SELECT titulo FROM oportunidade WHERE id = ?")
+            .get(alvoId) as { titulo: string } | undefined;
+          db.prepare(
+            `INSERT INTO sugestao (execucao_id, produto_id, tipo, alvo_tabela, alvo_id, payload, resumo, criada_em)
+             VALUES (?, ?, 'criar_solucao', 'oportunidade', ?, ?, ?, ?)`
+          ).run(
+            execucaoId,
+            produtoId,
+            alvoId,
+            JSON.stringify(args),
+            `Ideia da conversa para "${op?.titulo ?? "?"}": ${args.titulo}`,
+            agora()
+          );
+          return `📋 Propus a solução "${args.titulo}" — o card está nesta página, acima da conversa. Aprove (o título segue editável) ou rejeite com o motivo; ela só conta para o 3/3 depois do seu aceite.`;
+        },
+      },
+    ],
+  },
 ];
 
 export const CONSELHEIROS: ReadonlyMap<string, Conselheiro> = new Map(
@@ -213,13 +300,13 @@ export function getConselheiro(topico: string): Conselheiro {
   return c;
 }
 
-export function montarSistema(c: Conselheiro, produtoId: number): string {
+export function montarSistema(c: Conselheiro, produtoId: number, alvoId = 0): string {
   const prompt = fs.readFileSync(
     path.join(process.cwd(), "src/lib/agentes/prompts", c.arquivoPrompt),
     "utf-8"
   );
   return `${prompt}\n\n## Contexto do workspace (a plataforma injeta — sempre atual)\n\n${JSON.stringify(
-    c.contexto(produtoId),
+    c.contexto(produtoId, alvoId),
     null,
     2
   )}`;
@@ -237,15 +324,15 @@ export interface MensagemConversa {
 /** Quantas mensagens recentes vão para o modelo (o resto fica só no histórico). */
 export const JANELA_CONVERSA = 30;
 
-export function conversaDoTopico(produtoId: number, topico: string): number {
+export function conversaDoTopico(produtoId: number, topico: string, alvoId = 0): number {
   const existente = db
-    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ?")
-    .get(produtoId, topico) as { id: number } | undefined;
+    .prepare("SELECT id FROM conversa WHERE produto_id = ? AND topico = ? AND alvo_id = ?")
+    .get(produtoId, topico, alvoId) as { id: number } | undefined;
   if (existente) return existente.id;
   return Number(
     db
-      .prepare("INSERT INTO conversa (produto_id, topico, criada_em) VALUES (?, ?, ?)")
-      .run(produtoId, topico, agora()).lastInsertRowid
+      .prepare("INSERT INTO conversa (produto_id, topico, alvo_id, criada_em) VALUES (?, ?, ?, ?)")
+      .run(produtoId, topico, alvoId, agora()).lastInsertRowid
   );
 }
 
