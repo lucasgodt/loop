@@ -616,7 +616,7 @@ export async function atualizarLancamento(fd: FormData) {
     `UPDATE lancamento SET
        nome = ?, data_lancamento = ?, hipotese = ?, metrica_primaria = ?, metrica_negocio_id = ?,
        baseline = ?, meta = ?, guardrails = ?, fonte_dados = ?, notas = ?,
-       veredito = ?, aprendizado = ?, fonte_dados_id = ?, consulta = ?
+       veredito = ?, aprendizado = ?, fonte_dados_id = ?, consulta = ?, instrumentacao = ?
      WHERE id = ?`
   ).run(
     texto(fd, "nome"),
@@ -633,6 +633,7 @@ export async function atualizarLancamento(fd: FormData) {
     texto(fd, "aprendizado"),
     inteiroOuNulo(fd, "fonte_dados_id"),
     texto(fd, "consulta"),
+    texto(fd, "instrumentacao"),
     id
   );
   tudoMudou();
@@ -712,7 +713,7 @@ export async function aceitarSugestao(fd: FormData) {
         : atual[campo];
     db.prepare(
       `UPDATE lancamento SET hipotese = ?, metrica_primaria = ?, metrica_negocio_id = ?,
-         baseline = ?, meta = ?, guardrails = ?, fonte_dados_id = ?, consulta = ?
+         baseline = ?, meta = ?, guardrails = ?, fonte_dados_id = ?, consulta = ?, instrumentacao = ?
        WHERE id = ?`
     ).run(
       valor("hipotese"),
@@ -723,6 +724,7 @@ export async function aceitarSugestao(fd: FormData) {
       valor("guardrails"),
       p.fonte_dados_id ?? atual.fonte_dados_id,
       valor("consulta"),
+      valor("instrumentacao"),
       sugestao.alvo_id
     );
     db.prepare(

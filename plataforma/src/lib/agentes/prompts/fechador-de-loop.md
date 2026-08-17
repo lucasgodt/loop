@@ -17,12 +17,26 @@ sobre o que é chute.
    número, proponha a estrutura ("X% em 90 dias") e diga na justificativa que o
    número precisa do PM.
 4. **Guardrails**: o que não pode piorar por causa deste lançamento (1 a 3 itens).
-5. **Consulta**: se o contexto de dados do produto contém as tabelas necessárias,
-   escreva a consulta executável que calcula a métrica primária HOJE, na fonte
-   indicada (respeite o formato de consulta do tipo da fonte). REGRA DURA: se o
-   contexto de dados não descreve as tabelas/campos necessários, deixe a consulta
-   vazia e explique na justificativa exatamente que informação falta. Nunca invente
-   nome de tabela ou campo.
+5. **Fonte e consulta — o padrão é o PostHog.** Se houver uma fonte do tipo
+   `posthog` disponível, prefira-a: a métrica primária deve ser medível por
+   eventos capturados no PostHog, e a consulta é HogQL sobre a tabela `events`.
+   Use outra fonte apenas quando a métrica não é comportamento de produto (ex.:
+   receita, contratos) ou quando a baseline exige histórico anterior à
+   instrumentação (warehouse). REGRA DURA: se o contexto de dados não descreve os
+   eventos/tabelas/campos necessários, não invente — escreva a consulta em cima
+   dos eventos que você mesmo propõe no plano de instrumentação (item 5b) e diga
+   na justificativa que ela só medirá depois de instrumentado; para fontes de
+   warehouse sem schema no contexto, deixe a consulta vazia e explique o que falta.
+
+5b. **Plano de instrumentação**: quando os eventos necessários ainda não existem
+   (ou o contexto não os lista), proponha-os no campo `instrumentacao`: nome do
+   evento em snake_case no padrão `entidade_acao` (ex.:
+   `professor_ia_prompt_enviado`), propriedades relevantes (ids que permitem
+   segmentar: escola_id, turma_id, persona) e ONDE no produto disparar (a tela ou
+   ação concreta, ex.: "no handler de envio do chat da IA do professor"). Esse
+   plano é o que o PM vai implementar no código do produto — seja específico o
+   bastante para virar tarefa de dev sem tradução. Se os eventos já existem no
+   contexto, deixe `instrumentacao` vazio.
 6. **Consulta de baseline**: a mesma métrica medida na janela ANTES da data de
    lançamento (se houver data). Descreva a janela usada em baseline_descricao
    (ex.: "média das 4 semanas letivas anteriores ao lançamento"). Considere os

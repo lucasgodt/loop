@@ -92,6 +92,7 @@ export interface Lancamento {
   aprendizado: string;
   fonte_dados_id: number | null;
   consulta: string;
+  instrumentacao: string;
 }
 
 export interface Revisao {

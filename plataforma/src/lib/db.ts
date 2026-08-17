@@ -251,6 +251,9 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   // contexto de dados do produto (schema do warehouse, joins, confounders) —
   // insumo dos agentes para escrever consultas; configuração, nunca hardcode
   ["produto", "contexto TEXT NOT NULL DEFAULT ''"],
+  // plano de instrumentação do lançamento: quais eventos capturar (PostHog)
+  // e onde no produto dispará-los — a ponte entre medir e instrumentar
+  ["lancamento", "instrumentacao TEXT NOT NULL DEFAULT ''"],
 ];
 
 declare global {

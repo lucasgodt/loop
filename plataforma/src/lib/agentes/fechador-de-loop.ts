@@ -13,6 +13,7 @@ interface SaidaFicha {
   consulta: string;
   consulta_baseline: string;
   baseline_descricao: string;
+  instrumentacao: string;
   justificativa: string;
 }
 
@@ -38,6 +39,7 @@ const SCHEMA: Record<string, unknown> = {
     "consulta",
     "consulta_baseline",
     "baseline_descricao",
+    "instrumentacao",
     "justificativa",
   ],
   properties: {
@@ -50,6 +52,7 @@ const SCHEMA: Record<string, unknown> = {
     consulta: { type: "string" },
     consulta_baseline: { type: "string" },
     baseline_descricao: { type: "string" },
+    instrumentacao: { type: "string" },
     justificativa: { type: "string" },
   },
 };
@@ -116,6 +119,8 @@ export const fechadorDeLoop: Agente = {
         metricas_de_negocio: metricas,
         fontes_disponiveis: fontes.map((f) => ({ id: f.id, nome: f.nome, tipo: f.tipo })),
         formato_de_consulta_por_tipo: {
+          posthog:
+            "uma query HogQL cuja primeira célula do resultado é o número (tabela events: event, timestamp, person_id, properties)",
           comando:
             "um comando de shell cuja última linha de saída é o número (ex.: bq query --use_legacy_sql=false --format=csv '...' | tail -1)",
           http: "URL seguida de espaço e caminho de pontos no JSON (ex.: https://api/x data.valor)",

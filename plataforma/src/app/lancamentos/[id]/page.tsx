@@ -134,6 +134,19 @@ export default async function FichaLancamento({
             placeholder="Se não dá para escrever como medir, a métrica ainda não é mensurável"
           />
         </div>
+        <div className="md:col-span-2">
+          <label className="lbl" htmlFor="instrumentacao">
+            Plano de instrumentação — eventos a capturar no produto
+          </label>
+          <textarea
+            id="instrumentacao"
+            name="instrumentacao"
+            rows={3}
+            defaultValue={lancamento.instrumentacao}
+            className="field font-mono text-xs"
+            placeholder={"ex.: evento professor_ia_prompt_enviado (props: escola_id, turma_id) — disparar no envio do chat da IA do professor"}
+          />
+        </div>
         <div>
           <label className="lbl" htmlFor="fonte_dados_id">Fonte plugada (automação)</label>
           <select
@@ -359,6 +372,12 @@ function RascunhoDoAgente({
             {p.baseline_erro && (
               <dd className="mt-1 font-mono text-xs text-danger">✗ {p.baseline_erro}</dd>
             )}
+          </div>
+        )}
+        {p.instrumentacao && (
+          <div>
+            <dt className="lbl">📡 Plano de instrumentação (implementar no produto)</dt>
+            <dd className="rounded-lg bg-warn-soft/40 p-2 font-mono text-xs whitespace-pre-wrap">{p.instrumentacao}</dd>
           </div>
         )}
         {p.justificativa && (

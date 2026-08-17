@@ -123,10 +123,12 @@ export default async function Fontes({
           ))}
         </div>
         <p className="mt-3 text-xs text-muted">
-          O BigQuery da Mooney pluga hoje pelo tipo <strong>comando</strong> (via{" "}
-          <code className="font-mono">bq query</code>). Se um dia valer a pena, um
-          provedor nativo <code className="font-mono">bigquery.ts</code> entra no
-          registro sem tocar em mais nada.
+          <strong>O padrão é o PostHog</strong>: métricas de produto viram eventos
+          capturados lá, e o plano de instrumentação faz parte da ficha de cada
+          lançamento. As outras fontes são válvula de escape — o BigQuery da Mooney
+          pluga pelo tipo <strong>comando</strong> (via{" "}
+          <code className="font-mono">bq query</code>) e serve principalmente para
+          baselines históricas de antes da instrumentação.
         </p>
       </section>
 

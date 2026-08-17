@@ -1,5 +1,6 @@
 import { comando } from "./comando";
 import { http } from "./http";
+import { posthog } from "./posthog";
 import type { Provedor, ResultadoMedicao } from "./types";
 
 export type { Provedor, ResultadoMedicao } from "./types";
@@ -9,7 +10,7 @@ export type { Provedor, ResultadoMedicao } from "./types";
  * Mixpanel, Google Sheets…): crie um arquivo neste diretório implementando
  * `Provedor` e adicione-o à lista abaixo. É a única mudança necessária.
  */
-const LISTA: Provedor[] = [comando, http];
+const LISTA: Provedor[] = [posthog, comando, http];
 
 export const PROVEDORES: ReadonlyMap<string, Provedor> = new Map(
   LISTA.map((p) => [p.tipo, p])

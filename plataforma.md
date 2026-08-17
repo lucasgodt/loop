@@ -394,8 +394,13 @@ contrato de `Provedor` (`src/lib/fontes/`): cada tipo de fonte é um arquivo que
 implementa `executar(config, consulta) → valor`; plugar um tipo novo é criar o
 arquivo e registrá-lo, nada mais muda. Uma `FonteDeDados` é uma conexão (tipo +
 config JSON); métricas e lançamentos guardam só *qual fonte* e *qual consulta*.
-Provedores iniciais: `comando` (qualquer coisa que imprime um número no terminal —
-é como o BigQuery pluga, via `bq query`) e `http` (JSON por caminho de pontos).
+Provedores: **`posthog` (o padrão preferido)** — a decisão de padronização: métricas
+de produto viram eventos capturados no PostHog, a consulta é HogQL, e o plano de
+instrumentação (quais eventos capturar e onde dispará-los no produto) é parte da
+ficha de lançamento, proposto pelo agente. `comando` (qualquer coisa que imprime um
+número no terminal — é como o BigQuery pluga, via `bq query`, útil para baseline
+histórica anterior à instrumentação) e `http` (JSON por caminho de pontos) seguem
+como válvulas de escape para o que o PostHog não cobre.
 O agendamento também é desacoplado: `npm run atualizar` roda tudo e imprime o
 digest de pendências — quem chama é o cron/launchd, não o app.
 
