@@ -14,6 +14,10 @@ Estrutura obrigatória do brief (markdown):
 5. **O que NÃO validamos** — copie VERBATIM a lista fornecida no material (seção
    "não validado"). Não resuma, não omita, não suavize. Se a lista estiver vazia,
    escreva "Todas as suposições de alto risco foram testadas."
+5b. **Requisitos de desenho (mitigam riscos)** — copie VERBATIM a lista de
+   "requisitos_de_desenho_que_mitigam_riscos": são decisões de desenho que
+   eliminam riscos sem teste; se a implementação não as cumprir, o risco volta.
+   Omita a seção apenas se a lista estiver vazia.
 6. **Como mediremos** — hipótese, métrica primária, meta e guardrails da ficha de
    lançamento (se existir); senão, escreva "Ficha de lançamento pendente — criar
    antes do lançamento."

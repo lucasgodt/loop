@@ -404,6 +404,7 @@ export interface Suposicao {
   importancia: number;
   evidencia: number;
   estado: string;
+  mitigacao: string;
 }
 
 /** Prioriza sem piedade: importante e sem evidência primeiro. */
@@ -419,7 +420,7 @@ export function getSuposicoes(solucaoId: number): Suposicao[] {
   const linhas = db
     .prepare(
       `SELECT su.id, su.solucao_id, su.texto, su.lente, su.passo_story_map_id,
-              psm.titulo AS passo_titulo, su.importancia, su.evidencia, su.estado
+              psm.titulo AS passo_titulo, su.importancia, su.evidencia, su.estado, su.mitigacao
        FROM suposicao su
        LEFT JOIN passo_story_map psm ON psm.id = su.passo_story_map_id
        WHERE su.solucao_id = ?`

@@ -219,6 +219,14 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
               </ul>
             </div>
           )}
+          {(b.mitigacoes ?? []).length > 0 && (
+            <div className="mt-2 rounded-lg bg-accent-soft/40 p-2 text-xs">
+              <span className="font-semibold">🛡 O desenho precisa garantir (mitiga riscos):</span>
+              <ul className="mt-1 list-inside list-disc">
+                {b.mitigacoes.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+          )}
           <Rodape sugestao={sugestao} rotuloAceitar="Arquivar brief" nota="copie o texto acima antes de arquivar" />
         </Shell>
       );

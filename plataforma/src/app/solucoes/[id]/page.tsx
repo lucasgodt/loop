@@ -11,7 +11,9 @@ import {
   criarPassoStoryMap,
   criarSuposicao,
   criarTeste,
+  mitigarSuposicao,
   mudarEstadoSolucao,
+  reabrirSuposicao,
 } from "@/app/actions";
 import { BlocoPr } from "@/app/pr-card";
 import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
@@ -47,6 +49,7 @@ const TOM_SUPOSICAO: Record<string, string> = {
   em_teste: "bg-warn-soft text-warn",
   validada: "bg-accent-soft text-accent",
   refutada: "bg-danger-soft text-danger",
+  mitigada: "bg-accent-soft text-accent",
 };
 
 export default async function DetalheSolucao({
@@ -241,6 +244,31 @@ export default async function DetalheSolucao({
             </div>
           </section>
 
+          {suposicoes.some((su) => su.estado === "mitigada") && (
+            <section className="mt-8">
+              <h2 className="lbl">Desenho da solução — o que a implementação precisa garantir</h2>
+              <div className="card border-accent">
+                <p className="mb-2 text-sm text-muted">
+                  Riscos mitigados por decisão de desenho, não por teste. Cada linha é um
+                  requisito: se o desenho não cumprir, o risco volta. Esta lista entra no
+                  brief do Empacotador.
+                </p>
+                <ul className="space-y-2">
+                  {suposicoes
+                    .filter((su) => su.estado === "mitigada")
+                    .map((su) => (
+                      <li key={su.id} className="text-sm">
+                        <span className="font-semibold">🛡 {su.mitigacao}</span>
+                        <p className="text-xs text-muted">
+                          mitiga: acreditamos que {su.texto} ({su.lente})
+                        </p>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
           <section className="mt-8">
             <h2 className="lbl">
               Suposições ({suposicoes.length}) — ordenadas por risco, sem piedade
@@ -313,6 +341,21 @@ export default async function DetalheSolucao({
                     </div>
                     {su.passo_titulo && (
                       <p className="mt-1 text-xs text-muted">nasce do passo: {su.passo_titulo}</p>
+                    )}
+                    {su.estado === "mitigada" && (
+                      <div className="mt-2 flex items-start justify-between gap-2 rounded-lg bg-accent-soft/50 p-2">
+                        <p className="text-sm">🛡 {su.mitigacao}</p>
+                        <form action={reabrirSuposicao}>
+                          <input type="hidden" name="id" value={su.id} />
+                          <button
+                            className="shrink-0 font-mono text-xs text-muted hover:text-danger"
+                            type="submit"
+                            title="o desenho mudou e o risco voltou — a anotação da mitigação fica guardada"
+                          >
+                            reabrir risco
+                          </button>
+                        </form>
+                      </div>
                     )}
                     <div className="mt-2 flex gap-4">
                       <Editar>
@@ -395,6 +438,34 @@ export default async function DetalheSolucao({
                           </li>
                         ))}
                       </ul>
+                    )}
+
+                    {su.estado === "mapeada" && (
+                      <details className="mt-3 border-t border-line pt-3">
+                        <summary className="cursor-pointer text-xs font-semibold text-accent">
+                          🛡 mitigar pelo desenho (sem teste — a solução contorna o risco)
+                        </summary>
+                        <form action={mitigarSuposicao} className="mt-2 flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="id" value={su.id} />
+                          <div className="min-w-64 flex-1">
+                            <label className="lbl" htmlFor={`mit${su.id}`}>
+                              O que o desenho da solução precisa garantir
+                            </label>
+                            <input
+                              id={`mit${su.id}`}
+                              name="mitigacao"
+                              required
+                              className="field"
+                              placeholder={'ex.: "puxar série/tempo/coordenação dos dados que já temos — professor não inputa"'}
+                            />
+                          </div>
+                          <button className="btn-ghost" type="submit">Mitigar</button>
+                        </form>
+                        <p className="mt-1 text-xs text-muted">
+                          vira requisito na lista &quot;Desenho da solução&quot; e no brief — se o
+                          desenho não cumprir, reabra o risco
+                        </p>
+                      </details>
                     )}
 
                     {su.estado !== "validada" && su.estado !== "refutada" && testes.every((t) => t.veredito) && (

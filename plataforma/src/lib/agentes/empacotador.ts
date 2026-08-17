@@ -13,6 +13,8 @@ import type { Agente, ContextoAgente, Proposta } from "./types";
 export interface PayloadBrief {
   brief_md: string;
   nao_validado: string[];
+  /** Riscos mitigados por decisão de desenho — requisitos que a implementação precisa honrar. */
+  mitigacoes: string[];
 }
 
 const SCHEMA: Record<string, unknown> = {
@@ -52,7 +54,7 @@ export const empacotador: Agente = {
 
     const suposicoes = db
       .prepare(
-        `SELECT su.id, su.texto, su.lente, su.importancia, su.evidencia, su.estado
+        `SELECT su.id, su.texto, su.lente, su.importancia, su.evidencia, su.estado, su.mitigacao
          FROM suposicao su WHERE su.solucao_id = ?`
       )
       .all(alvoId) as {
@@ -62,6 +64,7 @@ export const empacotador: Agente = {
       importancia: number;
       evidencia: number;
       estado: string;
+      mitigacao: string;
     }[];
 
     // Portão de entrada do desenvolvimento — o mesmo aviso da página da solução.
@@ -117,10 +120,14 @@ export const empacotador: Agente = {
       .prepare("SELECT nome, descricao FROM produto WHERE id = ?")
       .get(produtoId) as { nome: string; descricao: string };
 
-    // A lista do "o que NÃO validamos" é do sistema, não do modelo.
+    // As listas de "não validado" e "requisitos de desenho" são do sistema,
+    // não do modelo.
     const naoValidado = suposicoes
       .filter((s) => s.estado === "mapeada" || s.estado === "em_teste")
       .map((s) => `Acreditamos que ${s.texto} (${s.lente}, ${s.estado.replace("_", " ")})`);
+    const mitigacoes = suposicoes
+      .filter((s) => s.estado === "mitigada" && s.mitigacao.trim())
+      .map((s) => `${s.mitigacao} — mitiga o risco: ${s.texto}`);
 
     const { saida } = await gerar({
       sistema: prompt(),
@@ -136,6 +143,7 @@ export const empacotador: Agente = {
           suposicoes,
           testes,
           nao_validado: naoValidado,
+          requisitos_de_desenho_que_mitigam_riscos: mitigacoes,
           ficha_de_lancamento: ficha ?? null,
         },
         null,
@@ -147,6 +155,7 @@ export const empacotador: Agente = {
     const payload: PayloadBrief = {
       brief_md: (saida as { brief_md: string }).brief_md,
       nao_validado: naoValidado,
+      mitigacoes,
     };
 
     return [

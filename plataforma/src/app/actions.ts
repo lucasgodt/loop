@@ -226,6 +226,38 @@ export async function criarTeste(fd: FormData) {
   revalidatePath(`/solucoes/${solucaoId}`);
 }
 
+/**
+ * O outro caminho do risco: em vez de teste, uma decisão de DESENHO da solução
+ * o elimina. A decisão fica anotada na suposição e vira requisito no brief.
+ */
+export async function mitigarSuposicao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const mitigacao = texto(fd, "mitigacao");
+  if (!mitigacao) return;
+  const suposicao = db
+    .prepare("SELECT solucao_id FROM suposicao WHERE id = ?")
+    .get(id) as { solucao_id: number } | undefined;
+  if (!suposicao) return;
+  db.prepare("UPDATE suposicao SET mitigacao = ?, estado = 'mitigada' WHERE id = ?").run(
+    mitigacao,
+    id
+  );
+  tudoMudou();
+  revalidatePath(`/solucoes/${suposicao.solucao_id}`);
+}
+
+/** Reabre o risco (volta a 'mapeada') sem perder a anotação da mitigação. */
+export async function reabrirSuposicao(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const suposicao = db
+    .prepare("SELECT solucao_id FROM suposicao WHERE id = ?")
+    .get(id) as { solucao_id: number } | undefined;
+  if (!suposicao) return;
+  db.prepare("UPDATE suposicao SET estado = 'mapeada' WHERE id = ?").run(id);
+  tudoMudou();
+  revalidatePath(`/solucoes/${suposicao.solucao_id}`);
+}
+
 export async function concluirTeste(fd: FormData) {
   const id = Number(fd.get("id"));
   const veredito = texto(fd, "veredito");
@@ -425,11 +457,15 @@ export async function apagarTeste(fd: FormData) {
   const restantes = db
     .prepare("SELECT veredito FROM teste_suposicao WHERE suposicao_id = ? ORDER BY id")
     .all(teste.suposicao_id) as { veredito: string | null }[];
-  let estado = "mapeada";
+  const su = db
+    .prepare("SELECT mitigacao FROM suposicao WHERE id = ?")
+    .get(teste.suposicao_id) as { mitigacao: string };
+  const base = su.mitigacao ? "mitigada" : "mapeada";
+  let estado = base;
   if (restantes.some((t) => t.veredito === null)) estado = "em_teste";
   else if (restantes.length > 0) {
     const ultimo = restantes[restantes.length - 1].veredito;
-    estado = ultimo === "inconclusiva" ? "mapeada" : ultimo ?? "mapeada";
+    estado = ultimo === "inconclusiva" ? base : ultimo ?? base;
   }
   db.prepare("UPDATE suposicao SET estado = ? WHERE id = ?").run(estado, teste.suposicao_id);
   const solucaoId = (

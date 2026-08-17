@@ -76,7 +76,7 @@ const PASSOS: {
     n: 8,
     titulo: "Testes de suposição",
     oQueFazer:
-      "Teste a mais arriscada primeiro, do jeito mais barato. O critério de sucesso é numérico e vem ANTES do teste — o sistema não aceita teste sem critério.",
+      "Teste a mais arriscada primeiro, do jeito mais barato. O critério de sucesso é numérico e vem ANTES do teste — o sistema não aceita teste sem critério. Nem todo risco pede teste: alguns se mitigam por decisão de DESENHO da solução — anote a mitigação na suposição (🛡) e ela vira requisito no brief.",
     onde: { href: "/oportunidades", rotulo: "página da solução" },
   },
   {

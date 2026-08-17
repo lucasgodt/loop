@@ -330,6 +330,9 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   // o checklist de onboarding se auto-detecta por query; este flag só o esconde
   // depois de completo (nunca há estado de onboarding que possa dessincronizar)
   ["produto", "onboarding_dispensado INTEGER NOT NULL DEFAULT 0"],
+  // mitigação por desenho: a decisão de desenho da solução que elimina o risco
+  // sem teste (estado 'mitigada') — vira requisito no brief do Empacotador
+  ["suposicao", "mitigacao TEXT NOT NULL DEFAULT ''"],
 ];
 
 declare global {
