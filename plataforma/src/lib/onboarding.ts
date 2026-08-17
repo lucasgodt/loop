@@ -136,6 +136,43 @@ export const ITENS_ONBOARDING: ItemOnboarding[] = [
     },
   },
   {
+    id: "ideacao",
+    titulo: "Gerar 3+ ideias de solução para a oportunidade em discovery",
+    porque:
+      "A primeira ideia raramente é a melhor — o sistema só abre o mapa de suposições com 3 ideias na mesa. Anote até as que vai descartar (o contraste é o valor); o Provocador destrava a 3ª se você travar.",
+    link: "/oportunidades",
+    rotuloLink: "página da oportunidade",
+    feito(produtoId) {
+      return (
+        n(
+          `SELECT COUNT(*) AS n FROM oportunidade o
+           WHERE o.produto_id = ?
+             AND (SELECT COUNT(*) FROM solucao s WHERE s.oportunidade_id = o.id) >= 3`,
+          produtoId
+        ) > 0
+      );
+    },
+  },
+  {
+    id: "teste",
+    titulo: "Mapear suposições e testar a mais arriscada",
+    porque:
+      "Abra a solução favorita: story map, suposições nas 5 lentes (importância × evidência) e o teste mais barato da mais arriscada — com critério numérico definido ANTES. É o que descobre que estava errado enquanto ainda é barato.",
+    link: "/oportunidades",
+    rotuloLink: "página da solução",
+    feito(produtoId) {
+      return (
+        n(
+          `SELECT COUNT(*) AS n FROM teste_suposicao t
+           JOIN suposicao su ON su.id = t.suposicao_id
+           JOIN solucao s ON s.id = su.solucao_id
+           WHERE s.produto_id = ?`,
+          produtoId
+        ) > 0
+      );
+    },
+  },
+  {
     id: "ficha",
     titulo: "Preencher a primeira ficha de lançamento",
     porque:
