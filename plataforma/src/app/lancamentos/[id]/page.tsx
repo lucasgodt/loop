@@ -72,7 +72,23 @@ export default async function FichaLancamento({
         habilitado={!!lancamento.instrumentacao.trim()}
       />
 
-      <form action={atualizarLancamento} className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* key: quando o aceite do Fechador preenche a ficha, o form REMONTA com
+          os valores novos — defaultValue não atualiza campos já renderizados. */}
+      <form
+        key={[
+          lancamento.hipotese,
+          lancamento.metrica_primaria,
+          lancamento.baseline,
+          lancamento.meta,
+          lancamento.guardrails,
+          lancamento.consulta,
+          lancamento.instrumentacao,
+          lancamento.veredito,
+          lancamento.aprendizado,
+        ].join("§")}
+        action={atualizarLancamento}
+        className="card mt-6 grid grid-cols-1 gap-4 md:grid-cols-2"
+      >
         <input type="hidden" name="id" value={lancamento.id} />
         <div>
           <label className="lbl" htmlFor="nome">Nome</label>

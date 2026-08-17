@@ -9,6 +9,7 @@ import {
   removerEvidencia,
   salvarAvaliacao,
 } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
@@ -194,7 +195,14 @@ export default async function DetalheOportunidade({
 
       <section className="mt-8">
         <h2 className="lbl">Avaliação de priorização</h2>
-        <form action={salvarAvaliacao} className="card grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* key: quando o aceite de um rascunho (ou um salvar) muda a avaliação,
+            o form REMONTA — sem isso, defaultValue não atualiza campos já
+            renderizados e um "Salvar" em seguida zeraria tudo. */}
+        <form
+          key={aval?.atualizada_em ?? "sem-avaliacao"}
+          action={salvarAvaliacao}
+          className="card grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
           <input type="hidden" name="oportunidade_id" value={o.id} />
           {CRITERIOS.map((c) => (
             <div key={c.campo}>
@@ -233,11 +241,18 @@ export default async function DetalheOportunidade({
               placeholder={'"Escolhemos esta em vez de X e Y porque…"'}
             />
           </div>
-          <div className="md:col-span-2 flex items-center justify-between">
+          <div className="md:col-span-2 flex items-center justify-between gap-3">
             <Link href="/priorizacao" className="text-xs text-muted underline">
               comparar com as irmãs na priorização →
             </Link>
-            <button className="btn" type="submit">Salvar avaliação</button>
+            <span className="flex items-center gap-3">
+              {aval?.atualizada_em && (
+                <span className="font-mono text-xs text-muted">
+                  salva em {aval.atualizada_em.slice(0, 16).replace("T", " ")}
+                </span>
+              )}
+              <BotaoPendente rotulo="Salvar avaliação" rotuloPendente="salvando…" />
+            </span>
           </div>
         </form>
       </section>
