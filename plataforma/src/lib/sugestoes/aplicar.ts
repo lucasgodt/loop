@@ -14,7 +14,7 @@ interface SinalProposto {
 
 export function aplicarSugestao(
   id: number,
-  extras: { tituloOverride?: string } = {}
+  extras: { tituloOverride?: string; solucaoOverride?: number } = {}
 ): void {
   const sugestao = db.prepare("SELECT * FROM sugestao WHERE id = ?").get(id) as
     | {
@@ -350,6 +350,50 @@ export function aplicarSugestao(
             "INSERT INTO passo_jornada (produto_id, persona_id, ordem, titulo, descricao) VALUES (?, ?, ?, ?, ?)"
           ).run(sugestao.produto_id, personaId, ordem, passo.titulo, passo.descricao ?? "");
         }
+        break;
+      }
+
+      // Comparador: o aceite leva a análise da solução escolhida (pelo PM —
+      // pode ser outra que a recomendada) para o passo 7: jornada vira story
+      // map, riscos viram suposições penduradas nos passos, evidência baixa.
+      case "comparar_solucoes": {
+        const solucaoId = Number(extras.solucaoOverride || p.escolhida_id);
+        const analise = (p.analises as {
+          solucao_id: number;
+          jornada: { passo: string; risco: string; lente: string; gravidade: number }[];
+        }[]).find((a) => a.solucao_id === solucaoId);
+        if (!analise) throw new Error("a solução escolhida não está na comparação");
+        const existe = db.prepare("SELECT id FROM solucao WHERE id = ?").get(solucaoId);
+        if (!existe) throw new Error("a solução escolhida não existe mais");
+        const jaTemMapa = db
+          .prepare("SELECT COUNT(*) AS n FROM passo_story_map WHERE solucao_id = ?")
+          .get(solucaoId) as { n: number };
+        if (jaTemMapa.n > 0) {
+          throw new Error(
+            "esta solução já tem story map — apague os passos dela antes, ou use o Agente de Risco para completar"
+          );
+        }
+        let ordem = 0;
+        for (const item of analise.jornada) {
+          ordem += 1;
+          const passo = db
+            .prepare("INSERT INTO passo_story_map (solucao_id, ordem, titulo) VALUES (?, ?, ?)")
+            .run(solucaoId, ordem, item.passo);
+          if (item.risco.trim()) {
+            db.prepare(
+              `INSERT INTO suposicao (solucao_id, texto, lente, passo_story_map_id, importancia, evidencia, estado, criada_em)
+               VALUES (?, ?, ?, ?, ?, 2, 'mapeada', ?)`
+            ).run(
+              solucaoId,
+              item.risco,
+              item.lente,
+              Number(passo.lastInsertRowid),
+              item.gravidade,
+              agora()
+            );
+          }
+        }
+        entidadeCriadaId = solucaoId;
         break;
       }
 

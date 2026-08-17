@@ -118,6 +118,17 @@ export default async function DetalheOportunidade({
               dica="até 3 candidatas genuinamente diferentes das suas, ancoradas nas evidências — aprove uma a uma"
             />
           )}
+          {solucoes.filter((s) => s.estado !== "descartada").length >= 3 &&
+            !pendentes.some((s) => s.tipo === "comparar_solucoes") && (
+              <BotaoAgente
+                agenteId="comparador"
+                produtoId={produto.id}
+                alvoId={o.id}
+                volta={volta}
+                rotulo="🤖 Comparar soluções"
+                dica="jornada de valor + risco por passo de cada uma; recomenda a de maior chance com menor risco — a escolha continua sua"
+              />
+            )}
         </div>
       )}
 

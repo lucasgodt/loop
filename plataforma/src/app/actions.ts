@@ -765,7 +765,10 @@ export async function aceitarSugestao(fd: FormData) {
 
   const { aplicarSugestao } = await import("@/lib/sugestoes/aplicar");
   try {
-    aplicarSugestao(id, { tituloOverride: texto(fd, "titulo_override") || undefined });
+    aplicarSugestao(id, {
+      tituloOverride: texto(fd, "titulo_override") || undefined,
+      solucaoOverride: inteiroOuNulo(fd, "solucao_override") ?? undefined,
+    });
   } catch (e) {
     // Downgrade gracioso: a sugestão fica marcada como falha, com o motivo.
     db.prepare(

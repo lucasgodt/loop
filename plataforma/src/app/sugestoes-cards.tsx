@@ -1,5 +1,6 @@
 import { aceitarSugestao, rejeitarSugestao, rodarAgente } from "@/app/actions";
 import { BotaoPendente } from "@/app/botao-pendente";
+import type { PayloadComparacao } from "@/lib/agentes/comparador";
 import type { PayloadAvaliacao } from "@/lib/agentes/redator-avaliacao";
 import type { PayloadBrief } from "@/lib/agentes/empacotador";
 import type { Sugestao } from "@/lib/queries";
@@ -246,6 +247,82 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
           />
         </Shell>
       );
+
+    case "comparar_solucoes": {
+      const c = p as unknown as PayloadComparacao;
+      const TOM_RISCO = (n: number) =>
+        n >= 4 ? "bg-danger-soft text-danger" : n >= 3 ? "bg-warn-soft text-warn" : "bg-accent-soft text-accent";
+      return (
+        <Shell titulo="🤖 Comparação do Comparador de Soluções" sugestao={sugestao}>
+          <div className="mt-2 space-y-2">
+            {c.analises.map((a) => {
+              const recomendada = a.solucao_id === c.escolhida_id;
+              return (
+                <details
+                  key={a.solucao_id}
+                  open={recomendada}
+                  className={`rounded-lg border p-3 ${recomendada ? "border-accent" : "border-line"}`}
+                >
+                  <summary className="cursor-pointer text-sm font-semibold">
+                    {recomendada && <span className="badge mr-2 bg-accent-soft text-accent">recomendada</span>}
+                    {a.titulo}
+                    <span className={`badge ml-2 ${TOM_RISCO(a.risco_geral)}`}>
+                      risco geral {a.risco_geral}/5
+                    </span>
+                  </summary>
+                  <p className="mt-2 text-sm text-muted">{a.resumo}</p>
+                  <ol className="mt-2 space-y-1.5">
+                    {a.jornada.map((passo, i) => (
+                      <li key={i} className="text-sm">
+                        <span className="font-mono text-xs text-muted">{i + 1}.</span>{" "}
+                        <span className="font-semibold">{passo.passo}</span>
+                        <p className="ml-5 text-xs text-muted">
+                          ⚠ {passo.risco}{" "}
+                          <span className="badge ml-1 bg-line/60 text-muted">
+                            {passo.lente} · grav {passo.gravidade}
+                          </span>
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              );
+            })}
+          </div>
+          <div className="mt-3 rounded-lg bg-line/30 p-3 text-sm">
+            <span className="lbl">Justificativa</span>
+            <p className="mt-1 whitespace-pre-wrap">{c.justificativa}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+            <form action={aceitarSugestao} className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="id" value={sugestao.id} />
+              <select
+                name="solucao_override"
+                defaultValue={c.escolhida_id}
+                className="field w-auto py-1.5 text-sm"
+                title="a escolha é sua — pode aplicar em outra que não a recomendada"
+              >
+                {c.analises.map((a) => (
+                  <option key={a.solucao_id} value={a.solucao_id}>{a.titulo}</option>
+                ))}
+              </select>
+              <BotaoPendente rotulo="Aceitar — levar jornada e riscos para a solução" rotuloPendente="aplicando…" />
+            </form>
+            <details>
+              <summary className="cursor-pointer font-mono text-xs text-muted hover:text-danger">rejeitar</summary>
+              <form action={rejeitarSugestao} className="mt-2 flex gap-2">
+                <input type="hidden" name="id" value={sugestao.id} />
+                <input name="motivo" className="field w-64 py-1 text-xs" placeholder="motivo (melhora o prompt)" />
+                <button className="btn-ghost py-1 text-xs" type="submit">confirmar</button>
+              </form>
+            </details>
+            <span className="ml-auto text-xs text-muted">
+              a jornada vira o story map e os riscos viram suposições mapeadas
+            </span>
+          </div>
+        </Shell>
+      );
+    }
 
     case "criar_jornada": {
       const passos = p.passos as { titulo: string; descricao: string }[];
