@@ -229,6 +229,17 @@ CREATE TABLE IF NOT EXISTS sugestao (
   criada_em TEXT NOT NULL
 );
 
+-- Matéria-prima bruta dos agentes (daily do CS colada, transcrição, thread).
+-- Persistida para a citação literal dos sinais ser verificável mecanicamente.
+CREATE TABLE IF NOT EXISTS insumo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL REFERENCES produto(id),
+  canal TEXT NOT NULL,
+  conteudo TEXT NOT NULL,
+  criada_em TEXT NOT NULL,
+  processado_em TEXT
+);
+
 -- O dial de autonomia por agente. modo: desligado | sugere | automatico
 CREATE TABLE IF NOT EXISTS agente_config (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

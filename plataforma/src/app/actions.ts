@@ -692,46 +692,52 @@ export async function rascunharFicha(fd: FormData) {
   revalidatePath(`/lancamentos/${lancamentoId}`);
 }
 
-/** Aceitar aplica o payload pelas mesmas mutações do fluxo manual. */
+/** Aceitar aplica o payload pelas mesmas mutações do fluxo manual (aplicador). */
 export async function aceitarSugestao(fd: FormData) {
   const id = Number(fd.get("id"));
-  const sugestao = db.prepare("SELECT * FROM sugestao WHERE id = ?").get(id) as
-    | { tipo: string; alvo_id: number | null; payload: string; estado: string }
+  const sugestao = db.prepare("SELECT alvo_tabela, alvo_id FROM sugestao WHERE id = ?").get(id) as
+    | { alvo_tabela: string; alvo_id: number | null }
     | undefined;
-  if (!sugestao || sugestao.estado !== "sugerida") return;
+  if (!sugestao) return;
 
-  if (sugestao.tipo === "rascunhar_ficha" && sugestao.alvo_id) {
-    const p = JSON.parse(sugestao.payload) as Record<string, unknown>;
-    // Mesmos campos que atualizarLancamento preenche — a ficha continua 100%
-    // editável depois; campos vazios do rascunho não apagam o que já existe.
-    const atual = db
-      .prepare("SELECT * FROM lancamento WHERE id = ?")
-      .get(sugestao.alvo_id) as Record<string, unknown>;
-    const valor = (campo: string) =>
-      typeof p[campo] === "string" && (p[campo] as string).trim() !== ""
-        ? p[campo]
-        : atual[campo];
+  const { aplicarSugestao } = await import("@/lib/sugestoes/aplicar");
+  try {
+    aplicarSugestao(id, { tituloOverride: texto(fd, "titulo_override") || undefined });
+  } catch (e) {
+    // Downgrade gracioso: a sugestão fica marcada como falha, com o motivo.
     db.prepare(
-      `UPDATE lancamento SET hipotese = ?, metrica_primaria = ?, metrica_negocio_id = ?,
-         baseline = ?, meta = ?, guardrails = ?, fonte_dados_id = ?, consulta = ?, instrumentacao = ?
-       WHERE id = ?`
-    ).run(
-      valor("hipotese"),
-      valor("metrica_primaria"),
-      p.metrica_negocio_id ?? atual.metrica_negocio_id,
-      valor("baseline"),
-      valor("meta"),
-      valor("guardrails"),
-      p.fonte_dados_id ?? atual.fonte_dados_id,
-      valor("consulta"),
-      valor("instrumentacao"),
-      sugestao.alvo_id
-    );
-    db.prepare(
-      "UPDATE sugestao SET estado = 'aceita', aplicada_em = ? WHERE id = ?"
-    ).run(agora(), id);
-    tudoMudou();
+      "UPDATE sugestao SET estado = 'falhou', motivo_rejeicao = ? WHERE id = ? AND estado = 'sugerida'"
+    ).run(e instanceof Error ? e.message : String(e), id);
+  }
+  tudoMudou();
+  if (sugestao.alvo_tabela === "lancamento" && sugestao.alvo_id) {
     revalidatePath(`/lancamentos/${sugestao.alvo_id}`);
+  }
+}
+
+/** Caixa "triar insumo com IA": persiste o bruto e roda o Triador. */
+export async function processarInsumo(fd: FormData) {
+  const produtoId = Number(fd.get("produto_id"));
+  const conteudo = texto(fd, "conteudo");
+  if (!conteudo) return;
+  const insumo = db
+    .prepare("INSERT INTO insumo (produto_id, canal, conteudo, criada_em) VALUES (?, ?, ?, ?)")
+    .run(produtoId, texto(fd, "canal") || "outro", conteudo, agora());
+  const insumoId = Number(insumo.lastInsertRowid);
+
+  const { executarAgente } = await import("@/lib/agentes/executar");
+  let resultado: { sugestoes: number };
+  try {
+    resultado = await executarAgente("triador", produtoId, "manual", insumoId);
+  } catch (e) {
+    redirect(
+      "/sinais?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  db.prepare("UPDATE insumo SET processado_em = ? WHERE id = ?").run(agora(), insumoId);
+  tudoMudou();
+  if (resultado.sugestoes === 0) {
+    redirect("/sinais?erro=" + encodeURIComponent("o Triador não extraiu nenhum sinal deste insumo"));
   }
 }
 

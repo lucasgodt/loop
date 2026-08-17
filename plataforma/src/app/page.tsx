@@ -62,7 +62,13 @@ export default function Home() {
             {sugestoes.map((s) => (
               <li key={s.id} className="text-sm">
                 <Link
-                  href={s.alvo_tabela === "lancamento" && s.alvo_id ? `/lancamentos/${s.alvo_id}` : "/"}
+                  href={
+                    s.alvo_tabela === "lancamento" && s.alvo_id
+                      ? `/lancamentos/${s.alvo_id}`
+                      : s.tipo.startsWith("sinal_")
+                        ? "/sinais"
+                        : "/"
+                  }
                   className="hover:text-accent"
                 >
                   {s.resumo}
