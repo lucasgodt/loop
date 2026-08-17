@@ -1,4 +1,8 @@
+import { agenteDeRisco } from "./agente-de-risco";
+import { empacotador } from "./empacotador";
 import { fechadorDeLoop } from "./fechador-de-loop";
+import { provocador } from "./provocador";
+import { redatorAvaliacao } from "./redator-avaliacao";
 import { roteirista } from "./roteirista";
 import { triador } from "./triador";
 import type { Agente } from "./types";
@@ -10,7 +14,15 @@ export type { Agente, ContextoAgente, Proposta, RefInsumo } from "./types";
  * prompts/) e adicioná-lo à lista. Nada mais no app muda — mesma filosofia
  * do registro de provedores em src/lib/fontes/.
  */
-const LISTA: Agente[] = [fechadorDeLoop, triador, roteirista];
+const LISTA: Agente[] = [
+  fechadorDeLoop,
+  triador,
+  roteirista,
+  redatorAvaliacao,
+  provocador,
+  agenteDeRisco,
+  empacotador,
+];
 
 export const AGENTES: ReadonlyMap<string, Agente> = new Map(LISTA.map((a) => [a.id, a]));
 

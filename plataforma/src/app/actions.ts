@@ -694,6 +694,26 @@ export async function rascunharFicha(fd: FormData) {
   revalidatePath(`/lancamentos/${lancamentoId}`);
 }
 
+/** Botões sob demanda dos agentes: roda e volta para a página com a sugestão. */
+export async function rodarAgente(fd: FormData) {
+  const agenteId = texto(fd, "agente_id");
+  const produtoId = Number(fd.get("produto_id"));
+  const alvoId = inteiroOuNulo(fd, "alvo_id") ?? undefined;
+  const volta = texto(fd, "volta") || "/";
+  const { executarAgente } = await import("@/lib/agentes/executar");
+  let resultado: { sugestoes: number };
+  try {
+    resultado = await executarAgente(agenteId, produtoId, "manual", alvoId);
+  } catch (e) {
+    redirect(`${volta}?erro=` + encodeURIComponent(e instanceof Error ? e.message : String(e)));
+  }
+  tudoMudou();
+  revalidatePath(volta);
+  if (resultado.sugestoes === 0) {
+    redirect(`${volta}?erro=` + encodeURIComponent("o agente não teve nada de novo a propor"));
+  }
+}
+
 /** Aceitar aplica o payload pelas mesmas mutações do fluxo manual (aplicador). */
 export async function aceitarSugestao(fd: FormData) {
   const id = Number(fd.get("id"));
@@ -712,8 +732,11 @@ export async function aceitarSugestao(fd: FormData) {
     ).run(e instanceof Error ? e.message : String(e), id);
   }
   tudoMudou();
-  if (sugestao.alvo_tabela === "lancamento" && sugestao.alvo_id) {
-    revalidatePath(`/lancamentos/${sugestao.alvo_id}`);
+  if (sugestao.alvo_id) {
+    const rota = { lancamento: "/lancamentos", oportunidade: "/oportunidades", solucao: "/solucoes" }[
+      sugestao.alvo_tabela
+    ];
+    if (rota) revalidatePath(`${rota}/${sugestao.alvo_id}`);
   }
 }
 

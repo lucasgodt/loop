@@ -57,18 +57,100 @@ const SCHEMA: Record<string, unknown> = {
   },
 };
 
-function prompt(): string {
+/** Rascunho de veredito — a outra ponta do mesmo agente, quando as revisões acabaram. */
+export interface PayloadVeredito {
+  veredito: "sucesso" | "fracasso" | "inconclusivo";
+  aprendizado: string;
+  justificativa: string;
+}
+
+const SCHEMA_VEREDITO: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["justificativa", "veredito", "aprendizado"],
+  properties: {
+    justificativa: {
+      type: "string",
+      description: "resultado vs meta vs baseline, tendência 30/60/90 e confounders — com os números",
+    },
+    veredito: { type: "string", enum: ["sucesso", "fracasso", "inconclusivo"] },
+    aprendizado: { type: "string", description: "o que muda a próxima decisão — não o resultado" },
+  },
+};
+
+function prompt(arquivo = "fechador-de-loop.md"): string {
   return fs.readFileSync(
-    path.join(process.cwd(), "src/lib/agentes/prompts/fechador-de-loop.md"),
+    path.join(process.cwd(), "src/lib/agentes/prompts", arquivo),
     "utf-8"
   );
+}
+
+interface RevisaoLida {
+  rotulo: string;
+  data_prevista: string;
+  data_realizada: string | null;
+  valor_observado: string;
+  notas: string;
+}
+
+async function rascunharVeredito(
+  ctx: ContextoAgente,
+  lancamento: Record<string, unknown>,
+  revisoes: RevisaoLida[]
+): Promise<Proposta[]> {
+  const { db, produtoId, gerar } = ctx;
+  const produto = db
+    .prepare("SELECT nome, descricao, contexto FROM produto WHERE id = ?")
+    .get(produtoId) as { nome: string; descricao: string; contexto: string };
+  const metrica = lancamento.metrica_negocio_id
+    ? (db
+        .prepare("SELECT nome, definicao, meta, valor_atual FROM metrica_negocio WHERE id = ?")
+        .get(lancamento.metrica_negocio_id) as Record<string, unknown> | undefined)
+    : undefined;
+
+  const { saida } = await gerar({
+    sistema: prompt("fechador-veredito.md"),
+    usuario: JSON.stringify(
+      {
+        produto: { nome: produto.nome, descricao: produto.descricao },
+        lancamento: {
+          nome: lancamento.nome,
+          data_lancamento: lancamento.data_lancamento,
+          hipotese: lancamento.hipotese,
+          metrica_primaria: lancamento.metrica_primaria,
+          baseline: lancamento.baseline,
+          meta: lancamento.meta,
+          guardrails: lancamento.guardrails,
+          notas: lancamento.notas,
+        },
+        metrica_de_negocio_apontada: metrica ?? null,
+        revisoes,
+      },
+      null,
+      2
+    ),
+    nomeSchema: "rascunho_veredito",
+    schema: SCHEMA_VEREDITO,
+  });
+  const payload = saida as unknown as PayloadVeredito;
+
+  return [
+    {
+      tipo: "rascunhar_veredito",
+      alvoTabela: "lancamento",
+      alvoId: Number(lancamento.id),
+      payload: payload as unknown as Record<string, unknown>,
+      resumo: `Veredito de "${lancamento.nome}": ${payload.veredito} (rascunho)`,
+      insumos: [{ tabela: "lancamento", registroId: Number(lancamento.id) }],
+    },
+  ];
 }
 
 export const fechadorDeLoop: Agente = {
   id: "fechador_de_loop",
   nome: "Fechador de Loop",
   descricao:
-    "Rascunha a ficha de medição de um lançamento: hipótese, métrica primária (leading → lagging), meta, guardrails e a consulta na fonte plugada — testada com dry-run e com baseline medida na janela pré-lançamento.",
+    "Rascunha a ficha de medição de um lançamento (hipótese, métrica, meta, consulta com dry-run, baseline) — e, quando todas as revisões estão medidas, rascunha o veredito + aprendizado para fechar o loop.",
   passoDoLoop: 10,
   async executar(ctx: ContextoAgente): Promise<Proposta[]> {
     const { db, produtoId, alvoId, gerar } = ctx;
@@ -78,6 +160,17 @@ export const fechadorDeLoop: Agente = {
       .prepare("SELECT * FROM lancamento WHERE id = ? AND produto_id = ?")
       .get(alvoId, produtoId) as Record<string, unknown> | undefined;
     if (!lancamento) throw new Error(`lançamento ${alvoId} não encontrado`);
+
+    // Se todas as revisões foram medidas e não há veredito, a tarefa desta
+    // rodada é fechar o loop — rascunhar veredito + aprendizado, não a ficha.
+    const revisoes = db
+      .prepare(
+        "SELECT rotulo, data_prevista, data_realizada, valor_observado, notas FROM revisao WHERE lancamento_id = ? ORDER BY data_prevista"
+      )
+      .all(alvoId) as RevisaoLida[];
+    if (!lancamento.veredito && revisoes.length > 0 && revisoes.every((r) => r.data_realizada)) {
+      return rascunharVeredito(ctx, lancamento, revisoes);
+    }
 
     const produto = db
       .prepare("SELECT nome, descricao, contexto FROM produto WHERE id = ?")

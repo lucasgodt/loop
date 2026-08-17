@@ -433,6 +433,7 @@ export interface Teste {
   suposicao_id: number;
   metodo: string;
   criterio: string;
+  roteiro: string;
   resultado: string;
   veredito: string | null;
   aprendizado: string;
@@ -530,6 +531,15 @@ export function sugestoesPendentes(produtoId: number): Sugestao[] {
       "SELECT * FROM sugestao WHERE produto_id = ? AND estado = 'sugerida' ORDER BY criada_em DESC"
     )
     .all(produtoId) as Sugestao[];
+}
+
+/** Todas as sugestões pendentes de um alvo — os botões sob demanda podem gerar várias. */
+export function sugestoesPendentesParaAlvo(alvoTabela: string, alvoId: number): Sugestao[] {
+  return db
+    .prepare(
+      "SELECT * FROM sugestao WHERE alvo_tabela = ? AND alvo_id = ? AND estado = 'sugerida' ORDER BY id"
+    )
+    .all(alvoTabela, alvoId) as Sugestao[];
 }
 
 export function sugestaoPendentePara(alvoTabela: string, alvoId: number): Sugestao | null {

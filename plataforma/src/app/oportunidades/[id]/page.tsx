@@ -9,7 +9,9 @@ import {
   removerEvidencia,
   salvarAvaliacao,
 } from "@/app/actions";
+import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
+import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import {
   getAvaliacao,
   getEntrevistas,
@@ -23,6 +25,7 @@ import {
   getSolucoes,
   LIMITE_WIP,
   scoreTotal,
+  sugestoesPendentesParaAlvo,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +66,8 @@ export default async function DetalheOportunidade({
   const solucoes = getSolucoes(o.id);
   const entrevistas = getEntrevistas(produto.id);
   const sinaisNovos = getSinais(produto.id, "novo");
+  const pendentes = sugestoesPendentesParaAlvo("oportunidade", o.id);
+  const volta = `/oportunidades/${o.id}`;
 
   return (
     <div>
@@ -88,6 +93,31 @@ export default async function DetalheOportunidade({
         )}
         <Apagar action={apagarOportunidade} id={o.id} />
       </div>
+
+      {temChaveDeIA() && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {evidencias.length > 0 && !pendentes.some((s) => s.tipo === "rascunho_avaliacao") && (
+            <BotaoAgente
+              agenteId="redator_avaliacao"
+              produtoId={produto.id}
+              alvoId={o.id}
+              volta={volta}
+              rotulo="🤖 Rascunhar avaliação"
+              dica="notas + justificativas citando as evidências, calibradas contra as irmãs — você aprova e a decisão é sua"
+            />
+          )}
+          {solucoes.length >= 1 && !pendentes.some((s) => s.tipo === "criar_solucao") && (
+            <BotaoAgente
+              agenteId="provocador"
+              produtoId={produto.id}
+              alvoId={o.id}
+              volta={volta}
+              rotulo="🤖 Provocar ideias"
+              dica="até 3 candidatas genuinamente diferentes das suas, ancoradas nas evidências — aprove uma a uma"
+            />
+          )}
+        </div>
+      )}
 
       <div className="mt-3">
         <Editar rotulo="editar oportunidade">
@@ -154,6 +184,13 @@ export default async function DetalheOportunidade({
           filhas para outra mãe) antes de apagar a oportunidade.
         </div>
       )}
+      {erro && !["wip", "avaliacao", "dependencias"].includes(erro) && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">Falha: {erro}</div>
+      )}
+
+      {pendentes.map((s) => (
+        <CardSugestao key={s.id} sugestao={s} />
+      ))}
 
       <section className="mt-8">
         <h2 className="lbl">Avaliação de priorização</h2>

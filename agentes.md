@@ -238,7 +238,7 @@ em camadas, como regra de sistema desde a fase 1:
 | 2 (~3-4 dias) | **Triador** (colar a daily do CS → sinais → diff da árvore), modo rascunho | Maior alívio recorrente (diário); resolve a decisão em aberto "CS registra ou Lucas tria?" por um terceiro caminho: o CS só entrega o bruto |
 | 3 (~2-3 dias) | Cadência de entrevistas pela via barata: roteiro + `transcricao` + síntese | Baixa o custo de cada entrevista que o Lucas já faz |
 | 4 (~1-2 dias) | `npm run agentes` + cron + regra do Vigia no atualizar | Só aqui considerar girar dials para automático, começando pelas ações aditivas/reversíveis |
-| 5 | Botões sob demanda: Redator de Avaliação, Agente de Risco, brief, concorrência | Com WIP de 2, priorização/ideação acontecem poucas vezes ao mês |
+| 5 ✓ | Botões sob demanda: Redator de Avaliação, Provocador de Ideias, Agente de Risco, brief do Empacotador + veredito rascunhado pelo Fechador | Com WIP de 2, priorização/ideação acontecem poucas vezes ao mês. (Pesquisa de concorrência com web ficou para depois — exige outra infra de busca) |
 | 6 | Entrevistador público | **Só com o gatilho observável.** Nunca antes |
 
 ## Decisões em aberto

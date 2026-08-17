@@ -12,7 +12,7 @@ import {
 } from "@/app/actions";
 import { Apagar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
-import type { PayloadFicha } from "@/lib/agentes/fechador-de-loop";
+import type { PayloadFicha, PayloadVeredito } from "@/lib/agentes/fechador-de-loop";
 import { sugestaoPendentePara } from "@/lib/queries";
 import {
   diasDeAtraso,
@@ -295,6 +295,9 @@ function RascunhoDoAgente({
 }) {
   if (temVeredito) return null;
   const sugestao = sugestaoPendentePara("lancamento", lancamentoId);
+  // Com todas as revisões medidas, a tarefa do Fechador muda: veredito, não ficha.
+  const revisoes = getRevisoes(lancamentoId);
+  const prontoParaVeredito = revisoes.length > 0 && revisoes.every((r) => r.data_realizada);
 
   if (!sugestao) {
     if (!temChaveDeIA()) {
@@ -311,12 +314,63 @@ function RascunhoDoAgente({
         <input type="hidden" name="id" value={lancamentoId} />
         <input type="hidden" name="produto_id" value={produtoId} />
         <button className="btn" type="submit">
-          🤖 Rascunhar ficha com IA
+          {prontoParaVeredito ? "🤖 Rascunhar veredito com IA" : "🤖 Rascunhar ficha com IA"}
         </button>
         <span className="ml-2 text-xs text-muted">
-          hipótese + métrica primária + SQL testado + baseline medida — você aprova campo a campo
+          {prontoParaVeredito
+            ? "resultado vs meta vs baseline + confounders — o veredito final é seu"
+            : "hipótese + métrica primária + SQL testado + baseline medida — você aprova campo a campo"}
         </span>
       </form>
+    );
+  }
+
+  if (sugestao.tipo === "rascunhar_veredito") {
+    const v = JSON.parse(sugestao.payload) as PayloadVeredito;
+    const TOM: Record<string, string> = {
+      sucesso: "bg-accent-soft text-accent",
+      fracasso: "bg-danger-soft text-danger",
+      inconclusivo: "bg-warn-soft text-warn",
+    };
+    return (
+      <div className="card mt-4 border-accent">
+        <div className="flex items-center justify-between gap-2">
+          <div className="lbl">🤖 Rascunho de veredito (Fechador de Loop)</div>
+          <span className="font-mono text-[10px] text-muted">
+            {sugestao.criada_em.slice(0, 16).replace("T", " ")}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className={`badge ${TOM[v.veredito] ?? ""}`}>{v.veredito}</span>
+        </div>
+        <dl className="mt-2 space-y-2 text-sm">
+          <div>
+            <dt className="lbl">Justificativa (números + confounders)</dt>
+            <dd className="whitespace-pre-wrap">{v.justificativa}</dd>
+          </div>
+          <div>
+            <dt className="lbl">Aprendizado — o que muda a próxima decisão</dt>
+            <dd>{v.aprendizado}</dd>
+          </div>
+        </dl>
+        <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+          <form action={aceitarSugestao}>
+            <input type="hidden" name="id" value={sugestao.id} />
+            <button className="btn" type="submit">Aceitar — fechar o loop</button>
+          </form>
+          <details>
+            <summary className="cursor-pointer font-mono text-xs text-muted hover:text-danger">rejeitar</summary>
+            <form action={rejeitarSugestao} className="mt-2 flex gap-2">
+              <input type="hidden" name="id" value={sugestao.id} />
+              <input name="motivo" className="field w-64 py-1 text-xs" placeholder="motivo (melhora o prompt)" />
+              <button className="btn-ghost py-1 text-xs" type="submit">confirmar</button>
+            </form>
+          </details>
+          <span className="ml-auto text-xs text-muted">
+            aceitar grava veredito + aprendizado — editáveis na ficha depois
+          </span>
+        </div>
+      </div>
     );
   }
 

@@ -158,6 +158,129 @@ export function aplicarSugestao(
         break;
       }
 
+      // Redator de Avaliação: preenche os 4 critérios — a decisão ("escolhemos
+      // X em vez de Y") é campo exclusivamente humano e nunca é tocada aqui.
+      case "rascunho_avaliacao": {
+        if (!sugestao.alvo_id) throw new Error("sugestão sem oportunidade alvo");
+        const existe = db
+          .prepare("SELECT id FROM oportunidade WHERE id = ?")
+          .get(sugestao.alvo_id);
+        if (!existe) throw new Error("a oportunidade não existe mais");
+        db.prepare(
+          `INSERT INTO avaliacao_oportunidade
+             (oportunidade_id, tamanho, tamanho_justif, companhia, companhia_justif,
+              mercado, mercado_justif, cliente, cliente_justif, decisao, atualizada_em)
+           VALUES (@oportunidade_id, @tamanho, @tamanho_justif, @companhia, @companhia_justif,
+                   @mercado, @mercado_justif, @cliente, @cliente_justif, '', @atualizada_em)
+           ON CONFLICT(oportunidade_id) DO UPDATE SET
+             tamanho = @tamanho, tamanho_justif = @tamanho_justif,
+             companhia = @companhia, companhia_justif = @companhia_justif,
+             mercado = @mercado, mercado_justif = @mercado_justif,
+             cliente = @cliente, cliente_justif = @cliente_justif,
+             atualizada_em = @atualizada_em`
+        ).run({
+          oportunidade_id: sugestao.alvo_id,
+          tamanho: (p.tamanho as number | null) ?? null,
+          tamanho_justif: String(p.tamanho_justif ?? ""),
+          companhia: (p.companhia as number | null) ?? null,
+          companhia_justif: String(p.companhia_justif ?? ""),
+          mercado: (p.mercado as number | null) ?? null,
+          mercado_justif: String(p.mercado_justif ?? ""),
+          cliente: (p.cliente as number | null) ?? null,
+          cliente_justif: String(p.cliente_justif ?? ""),
+          atualizada_em: agora(),
+        });
+        break;
+      }
+
+      // Provocador: uma candidata aprovada vira solução — e só então conta
+      // para o portão das 3+ soluções.
+      case "criar_solucao": {
+        if (!sugestao.alvo_id) throw new Error("sugestão sem oportunidade alvo");
+        const existe = db
+          .prepare("SELECT id FROM oportunidade WHERE id = ?")
+          .get(sugestao.alvo_id);
+        if (!existe) throw new Error("a oportunidade não existe mais");
+        const info = db
+          .prepare(
+            `INSERT INTO solucao (produto_id, oportunidade_id, titulo, descricao, estado, criada_em)
+             VALUES (?, ?, ?, ?, 'ideia', ?)`
+          )
+          .run(
+            sugestao.produto_id,
+            sugestao.alvo_id,
+            extras.tituloOverride?.trim() || String(p.titulo),
+            String(p.descricao ?? ""),
+            agora()
+          );
+        entidadeCriadaId = Number(info.lastInsertRowid);
+        break;
+      }
+
+      // Agente de Risco: as suposições aprovadas entram mapeadas — o PM edita
+      // ou apaga uma a uma depois, como qualquer suposição manual.
+      case "criar_suposicoes": {
+        if (!sugestao.alvo_id) throw new Error("sugestão sem solução alvo");
+        const existe = db.prepare("SELECT id FROM solucao WHERE id = ?").get(sugestao.alvo_id);
+        if (!existe) throw new Error("a solução não existe mais");
+        const inserir = db.prepare(
+          `INSERT INTO suposicao (solucao_id, texto, lente, passo_story_map_id, importancia, evidencia, estado, criada_em)
+           VALUES (?, ?, ?, ?, ?, ?, 'mapeada', ?)`
+        );
+        for (const s of p.suposicoes as {
+          texto: string;
+          lente: string;
+          passo_story_map_id: number | null;
+          importancia: number;
+          evidencia: number;
+        }[]) {
+          inserir.run(
+            sugestao.alvo_id,
+            s.texto,
+            s.lente,
+            s.passo_story_map_id ?? null,
+            s.importancia,
+            s.evidencia,
+            agora()
+          );
+        }
+        break;
+      }
+
+      // Agente de Risco: teste da mais arriscada — sem critério numérico
+      // (definido ANTES), não existe teste. Mesma regra do fluxo manual.
+      case "rascunhar_teste": {
+        const suposicaoId = Number(p.suposicao_id);
+        const suposicao = db
+          .prepare("SELECT id FROM suposicao WHERE id = ?")
+          .get(suposicaoId);
+        if (!suposicao) throw new Error("a suposição alvo não existe mais");
+        const criterio = String(p.criterio ?? "").trim();
+        if (!criterio || !/\d/.test(criterio))
+          throw new Error("teste sem critério numérico falseável não é teste");
+        db.prepare(
+          "INSERT INTO teste_suposicao (suposicao_id, metodo, criterio, roteiro, criada_em) VALUES (?, ?, ?, ?, ?)"
+        ).run(suposicaoId, String(p.metodo ?? ""), criterio, String(p.roteiro ?? ""), agora());
+        db.prepare("UPDATE suposicao SET estado = 'em_teste' WHERE id = ?").run(suposicaoId);
+        break;
+      }
+
+      // Fechador de Loop: aceitar o rascunho É o ato humano que fecha o loop —
+      // o agente sozinho nunca grava veredito.
+      case "rascunhar_veredito": {
+        if (!sugestao.alvo_id) throw new Error("sugestão sem lançamento alvo");
+        db.prepare("UPDATE lancamento SET veredito = ?, aprendizado = ? WHERE id = ?").run(
+          String(p.veredito),
+          String(p.aprendizado ?? ""),
+          sugestao.alvo_id
+        );
+        break;
+      }
+
+      // Empacotador: o brief é material de leitura — aceitar só o arquiva.
+      case "brief_solucao":
+        break;
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

@@ -269,6 +269,8 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   ["entrevista", "transcricao TEXT NOT NULL DEFAULT ''"],
   // quando o insumo nasce de uma entrevista, o vínculo preserva a proveniência
   ["insumo", "entrevista_id INTEGER REFERENCES entrevista(id)"],
+  // roteiro do teste: o script da entrevista dirigida ou a consulta do dado histórico
+  ["teste_suposicao", "roteiro TEXT NOT NULL DEFAULT ''"],
 ];
 
 declare global {

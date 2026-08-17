@@ -13,7 +13,9 @@ import {
   criarTeste,
   mudarEstadoSolucao,
 } from "@/app/actions";
+import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
+import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import {
   altoRisco,
   getPassosStoryMap,
@@ -22,6 +24,7 @@ import {
   getTestes,
   lancamentoDaSolucao,
   riscoDaSuposicao,
+  sugestoesPendentesParaAlvo,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +65,8 @@ export default async function DetalheSolucao({
   const suposicoes = getSuposicoes(s.id);
   const ficha = lancamentoDaSolucao(s.id);
   const arriscadasSemTeste = suposicoes.filter((su) => altoRisco(su) && su.estado === "mapeada");
+  const pendentes = sugestoesPendentesParaAlvo("solucao", s.id);
+  const volta = `/solucoes/${s.id}`;
 
   return (
     <div>
@@ -100,6 +105,34 @@ export default async function DetalheSolucao({
         <Apagar action={apagarSolucao} id={s.id} />
       </div>
 
+      {temChaveDeIA() && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {!bloqueada &&
+            !pendentes.some((p) => p.tipo === "criar_suposicoes" || p.tipo === "rascunhar_teste") && (
+              <BotaoAgente
+                agenteId="agente_de_risco"
+                produtoId={s.produto_id}
+                alvoId={s.id}
+                volta={volta}
+                rotulo="🤖 Mapear riscos"
+                dica="suposições nas 5 lentes (máx. 7, você carimba a matriz) + teste da mais arriscada já mapeada"
+              />
+            )}
+          {suposicoes.length > 0 &&
+            arriscadasSemTeste.length === 0 &&
+            !pendentes.some((p) => p.tipo === "brief_solucao") && (
+              <BotaoAgente
+                agenteId="empacotador"
+                produtoId={s.produto_id}
+                alvoId={s.id}
+                volta={volta}
+                rotulo="🤖 Brief pro Linear"
+                dica="todo o rastro do discovery num documento — incluindo o que NÃO validamos"
+              />
+            )}
+        </div>
+      )}
+
       <div className="mt-3">
         <Editar rotulo="editar solução">
           <form action={atualizarSolucao} className="card grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -122,6 +155,13 @@ export default async function DetalheSolucao({
           </form>
         </Editar>
       </div>
+
+      {erro && erro !== "sem_ficha" && (
+        <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">Falha: {erro}</div>
+      )}
+      {pendentes.map((p) => (
+        <CardSugestao key={p.id} sugestao={p} />
+      ))}
 
       {erro === "sem_ficha" && (
         <div className="card mt-4 border-danger bg-danger-soft/40 text-sm">
@@ -306,6 +346,9 @@ export default async function DetalheSolucao({
                                 </span>
                               )}
                             </div>
+                            {t.roteiro && (
+                              <p className="mt-1 text-xs text-muted whitespace-pre-wrap">roteiro: {t.roteiro}</p>
+                            )}
                             {t.resultado && (
                               <p className="mt-1 text-xs text-muted">resultado: {t.resultado}</p>
                             )}

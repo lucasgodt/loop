@@ -80,23 +80,43 @@ async function main(): Promise<number> {
   }
   if (vencidas.length === 0) console.log("Nenhuma revisão vencida com fonte plugada.");
 
-  // 3. Digest.
+  // 3. Lançamentos com todas as revisões medidas e sem veredito → o Fechador
+  //    rascunha o veredito (SEMPRE como sugestão — gravá-lo é ato humano).
+  const semVeredito = db
+    .prepare(
+      `SELECT l.id, l.nome FROM lancamento l WHERE l.produto_id = ? AND l.veredito IS NULL
+         AND EXISTS (SELECT 1 FROM revisao r WHERE r.lancamento_id = l.id)
+         AND NOT EXISTS (SELECT 1 FROM revisao r WHERE r.lancamento_id = l.id AND r.data_realizada IS NULL)`
+    )
+    .all(produto.id) as { id: number; nome: string }[];
+  for (const l of semVeredito) {
+    if (!temChaveDeIA()) {
+      console.log(`! "${l.nome}" pronto para veredito, mas sem OPENAI_API_KEY — rascunho pulado.`);
+      continue;
+    }
+    const jaPendente = db
+      .prepare(
+        `SELECT 1 FROM sugestao WHERE alvo_tabela = 'lancamento' AND alvo_id = ?
+           AND tipo = 'rascunhar_veredito' AND estado = 'sugerida'`
+      )
+      .get(l.id);
+    if (jaPendente) continue;
+    try {
+      await executarAgente("fechador_de_loop", produto.id, "cron", l.id);
+      console.log(`✓ Veredito de "${l.nome}" rascunhado — aguardando sua aprovação na ficha.`);
+    } catch (e) {
+      falhas++;
+      console.error(`✗ Veredito de "${l.nome}": ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // 4. Digest.
   const sugestoes = db
     .prepare("SELECT resumo FROM sugestao WHERE produto_id = ? AND estado = 'sugerida' ORDER BY criada_em DESC")
     .all(produto.id) as { resumo: string }[];
   if (sugestoes.length > 0) {
     console.log(`\n🤖 ${sugestoes.length} sugestão(ões) aguardando aprovação:`);
     for (const s of sugestoes) console.log(`  · ${s.resumo}`);
-  }
-  const semVeredito = db
-    .prepare(
-      `SELECT COUNT(*) AS n FROM lancamento l WHERE l.produto_id = ? AND l.veredito IS NULL
-         AND EXISTS (SELECT 1 FROM revisao r WHERE r.lancamento_id = l.id)
-         AND NOT EXISTS (SELECT 1 FROM revisao r WHERE r.lancamento_id = l.id AND r.data_realizada IS NULL)`
-    )
-    .get(produto.id) as { n: number };
-  if (semVeredito.n > 0) {
-    console.log(`! ${semVeredito.n} lançamento(s) com todas as revisões feitas e sem veredito — hora de aprender.`);
   }
 
   console.log(`\nConcluído em ${agora()}.`);

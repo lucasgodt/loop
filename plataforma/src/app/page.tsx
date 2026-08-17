@@ -63,13 +63,17 @@ export default function Home() {
               <li key={s.id} className="text-sm">
                 <Link
                   href={
-                    s.alvo_tabela === "lancamento" && s.alvo_id
+                    s.alvo_id && s.alvo_tabela === "lancamento"
                       ? `/lancamentos/${s.alvo_id}`
-                      : s.tipo.startsWith("sinal_") || s.tipo === "triar_sinal"
-                        ? "/sinais"
-                        : s.tipo === "roteiro_entrevista"
-                          ? "/entrevistas"
-                          : "/"
+                      : s.alvo_id && s.alvo_tabela === "oportunidade"
+                        ? `/oportunidades/${s.alvo_id}`
+                        : s.alvo_id && s.alvo_tabela === "solucao"
+                          ? `/solucoes/${s.alvo_id}`
+                          : s.tipo.startsWith("sinal_") || s.tipo === "triar_sinal"
+                            ? "/sinais"
+                            : s.tipo === "roteiro_entrevista"
+                              ? "/entrevistas"
+                              : "/"
                   }
                   className="hover:text-accent"
                 >
