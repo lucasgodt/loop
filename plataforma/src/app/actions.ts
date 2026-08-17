@@ -881,6 +881,22 @@ export async function conversarSobre(fd: FormData) {
 
   const conselheiro = getConselheiro(topico);
   const conversaId = conversaDoTopico(produtoId, topico);
+
+  // Reenvio acidental (duplo clique/Enter na espera): mesma mensagem em <90s
+  // não vira segunda rodada — o LLM já respondeu ou vai responder a primeira.
+  const ultimaDoUsuario = db
+    .prepare(
+      "SELECT conteudo, criada_em FROM mensagem_conversa WHERE conversa_id = ? AND papel = 'user' ORDER BY id DESC LIMIT 1"
+    )
+    .get(conversaId) as { conteudo: string; criada_em: string } | undefined;
+  if (
+    ultimaDoUsuario &&
+    ultimaDoUsuario.conteudo === mensagem &&
+    Date.now() - Date.parse(ultimaDoUsuario.criada_em) < 90_000
+  ) {
+    return;
+  }
+
   db.prepare(
     "INSERT INTO mensagem_conversa (conversa_id, papel, conteudo, criada_em) VALUES (?, 'user', ?, ?)"
   ).run(conversaId, mensagem, agora());

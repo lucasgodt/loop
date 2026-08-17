@@ -1,4 +1,5 @@
-import { conversarSobre, limparConversa } from "@/app/actions";
+import { limparConversa } from "@/app/actions";
+import { FormConversa } from "@/app/conversa-form";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import { conversaDoTopico, getConselheiro, mensagensDaConversa } from "@/lib/conselheiros";
 import { db } from "@/lib/db";
@@ -52,38 +53,35 @@ export function Conversa({
       {mensagens.length === 0 ? (
         <p className="mt-2 max-w-2xl text-sm text-muted">{conselheiro.convite}</p>
       ) : (
-        <div className="mt-3 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
-          {mensagens.map((m) => (
-            <div key={m.id} className={m.papel === "user" ? "flex justify-end" : "flex"}>
-              <div
-                className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
-                  m.papel === "user" ? "bg-accent-soft" : "bg-line/40"
-                }`}
-              >
-                {m.conteudo}
+        // flex-col-reverse com um único filho: o scroll nasce ancorado no FIM
+        // da conversa (a mensagem mais nova), sem precisar de JS.
+        <div className="mt-3 flex max-h-[28rem] flex-col-reverse overflow-y-auto pr-1">
+          <div className="space-y-3">
+            {mensagens.map((m) => (
+              <div key={m.id} className={m.papel === "user" ? "flex justify-end" : "flex"}>
+                <div
+                  className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                    m.papel === "user" ? "bg-accent-soft" : "bg-line/40"
+                  }`}
+                >
+                  {m.conteudo}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
-      <form action={conversarSobre} className="mt-3 flex gap-2 border-t border-line pt-3">
-        <input type="hidden" name="produto_id" value={produtoId} />
-        <input type="hidden" name="topico" value={topico} />
-        <input type="hidden" name="volta" value={volta} />
-        <input
-          name="mensagem"
-          required
-          autoComplete="off"
-          className="field flex-1"
-          placeholder={
-            mensagens.length === 0
-              ? "ex.: na sua opinião, WAU de alunos serve como lagging da Mooney?"
-              : "responder…"
-          }
-        />
-        <button className="btn" type="submit">Enviar</button>
-      </form>
+      <FormConversa
+        produtoId={produtoId}
+        topico={topico}
+        volta={volta}
+        placeholder={
+          mensagens.length === 0
+            ? "ex.: na sua opinião, WAU de alunos serve como lagging da Mooney?"
+            : "responder…"
+        }
+      />
       <p className="mt-2 text-xs text-muted">
         A conversa fica salva. Peça &quot;preenche pra mim&quot; quando convergir — a
         proposta vira um card para você aceitar; a decisão continua sua.
