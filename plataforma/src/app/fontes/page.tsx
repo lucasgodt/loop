@@ -1,16 +1,19 @@
 import {
   apagarFonte,
+  apagarPersona,
   apagarRepositorio,
   atualizarContextoProduto,
   atualizarFonte,
+  atualizarProduto,
   atualizarRepositorio,
   criarFonte,
+  criarPersona,
   criarRepositorio,
 } from "@/app/actions";
 import { Apagar, Editar } from "@/app/ui";
 import { EXECUTORES } from "@/lib/executores";
 import { PROVEDORES } from "@/lib/fontes";
-import { getFontes, getProduto, getRepositorios, usosDaFonte } from "@/lib/queries";
+import { getFontes, getPersonas, getProduto, getRepositorios, usosDaFonte } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +44,42 @@ export default async function Fontes({
           Erro: {erro}
         </div>
       )}
+
+      <section className="mt-6">
+        <h2 className="lbl">Workspace — o produto e quem o usa</h2>
+        <div className="card grid grid-cols-1 gap-4 md:grid-cols-2">
+          <form action={atualizarProduto} className="space-y-2">
+            <input type="hidden" name="id" value={produto.id} />
+            <div>
+              <label className="lbl" htmlFor="p-nome">Produto</label>
+              <input id="p-nome" name="nome" defaultValue={produto.nome} required className="field" />
+            </div>
+            <div>
+              <label className="lbl" htmlFor="p-desc">Descrição — o que ele faz, para quem</label>
+              <textarea id="p-desc" name="descricao" rows={3} defaultValue={produto.descricao} className="field" />
+            </div>
+            <div className="flex justify-end">
+              <button className="btn-ghost" type="submit">Salvar</button>
+            </div>
+          </form>
+          <div>
+            <div className="lbl">Personas</div>
+            <ul className="mt-1 space-y-1">
+              {getPersonas(produto.id).map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                  {p.nome}
+                  <Apagar action={apagarPersona} id={p.id} />
+                </li>
+              ))}
+            </ul>
+            <form action={criarPersona} className="mt-2 flex gap-2">
+              <input type="hidden" name="produto_id" value={produto.id} />
+              <input name="nome" required className="field flex-1" placeholder="ex.: Coordenadora pedagógica" />
+              <button className="btn-ghost" type="submit">+ persona</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
       <ul className="mt-6 space-y-3">
         {fontes.map((f) => {

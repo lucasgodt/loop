@@ -407,8 +407,10 @@ digest de pendências — quem chama é o cron/launchd, não o app.
 **Depois:** sincronização com Linear · transcrição de gravações · assistência de IA
 (fases restantes de ../agentes.md) · suporte real a múltiplos produtos.
 
-**Fase final — Onboarding guiado** (pedido do Lucas; construir depois de tudo, quando
-a plataforma estiver completa): da plataforma vazia ao loop rodando em ~15 minutos.
+**Fase final — Onboarding guiado ✓ CONSTRUÍDA** (2026-08-17): da plataforma vazia ao
+loop rodando em ~15 minutos. Checklist auto-detectado na home + manual em /guia
+(rotina, loop passo a passo, portões, agentes, PRs) + seção Workspace em /fontes
+(produto e personas editáveis). Evolução restante: o agente de onboarding conversacional.
 
 - **Forma: checklist persistente na home**, não um wizard modal — cada item linka
   para a tela certa e se marca **sozinho por auto-detecção** (a query correspondente

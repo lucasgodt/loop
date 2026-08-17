@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoopStrip } from "./loop-strip";
+import { ChecklistOnboarding } from "./onboarding";
 import { ListaTarefasPr } from "./pr-card";
 import {
   altoRiscoSemTeste,
@@ -56,6 +57,8 @@ export default function Home() {
       </div>
       <h1 className="display mt-1 text-5xl font-medium">O que fazer agora.</h1>
       <LoopStrip />
+
+      <ChecklistOnboarding produtoId={produto.id} />
 
       <ListaTarefasPr tarefas={tarefasPrVivas(produto.id)} />
 

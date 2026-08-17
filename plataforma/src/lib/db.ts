@@ -304,6 +304,9 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   ["insumo", "entrevista_id INTEGER REFERENCES entrevista(id)"],
   // roteiro do teste: o script da entrevista dirigida ou a consulta do dado histórico
   ["teste_suposicao", "roteiro TEXT NOT NULL DEFAULT ''"],
+  // o checklist de onboarding se auto-detecta por query; este flag só o esconde
+  // depois de completo (nunca há estado de onboarding que possa dessincronizar)
+  ["produto", "onboarding_dispensado INTEGER NOT NULL DEFAULT 0"],
 ];
 
 declare global {

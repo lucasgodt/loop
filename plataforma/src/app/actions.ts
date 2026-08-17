@@ -669,6 +669,47 @@ export async function gerarRevisoes(fd: FormData) {
 
 // ── Agentes de IA ────────────────────────────────────────────────────────────
 
+export async function atualizarProduto(fd: FormData) {
+  db.prepare("UPDATE produto SET nome = ?, descricao = ? WHERE id = ?").run(
+    texto(fd, "nome"),
+    texto(fd, "descricao"),
+    Number(fd.get("id"))
+  );
+  tudoMudou();
+  revalidatePath("/fontes");
+}
+
+export async function criarPersona(fd: FormData) {
+  const nome = texto(fd, "nome");
+  if (!nome) return;
+  db.prepare("INSERT INTO persona (produto_id, nome) VALUES (?, ?)").run(
+    Number(fd.get("produto_id")),
+    nome
+  );
+  tudoMudou();
+  revalidatePath("/fontes");
+}
+
+export async function apagarPersona(fd: FormData) {
+  const id = Number(fd.get("id"));
+  db.transaction(() => {
+    db.prepare("UPDATE passo_jornada SET persona_id = NULL WHERE persona_id = ?").run(id);
+    db.prepare("UPDATE oportunidade SET persona_id = NULL WHERE persona_id = ?").run(id);
+    db.prepare("UPDATE entrevista SET persona_id = NULL WHERE persona_id = ?").run(id);
+    db.prepare("DELETE FROM persona WHERE id = ?").run(id);
+  })();
+  tudoMudou();
+  revalidatePath("/fontes");
+}
+
+/** Esconde o checklist de onboarding — só oferecido quando ele está completo. */
+export async function dispensarOnboarding(fd: FormData) {
+  db.prepare("UPDATE produto SET onboarding_dispensado = 1 WHERE id = ?").run(
+    Number(fd.get("id"))
+  );
+  revalidatePath("/");
+}
+
 export async function atualizarContextoProduto(fd: FormData) {
   db.prepare("UPDATE produto SET contexto = ? WHERE id = ?").run(
     texto(fd, "contexto"),
