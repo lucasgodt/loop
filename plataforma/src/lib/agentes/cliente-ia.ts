@@ -16,7 +16,12 @@ export function modeloConfigurado(): string {
   return process.env.OPENAI_MODEL || "gpt-5.1";
 }
 
-export const gerar: GerarEstruturado = async ({ sistema, usuario, nomeSchema, schema }) => {
+/** Modelo barato para triagem/classificação; sem config, cai no padrão. */
+export function modeloMini(): string {
+  return process.env.OPENAI_MODEL_MINI || modeloConfigurado();
+}
+
+export const gerar: GerarEstruturado = async ({ sistema, usuario, nomeSchema, schema, modelo: override }) => {
   if (!temChaveDeIA()) {
     throw new Error(
       "OPENAI_API_KEY não configurada — adicione ao .env.local da plataforma para usar agentes"
@@ -24,7 +29,7 @@ export const gerar: GerarEstruturado = async ({ sistema, usuario, nomeSchema, sc
   }
   const { default: OpenAI } = await import("openai");
   const cliente = new OpenAI();
-  const modelo = modeloConfigurado();
+  const modelo = override || modeloConfigurado();
 
   const resposta = await cliente.chat.completions.create({
     model: modelo,

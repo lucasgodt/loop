@@ -10,7 +10,7 @@ interface SinalExtraido {
 
 interface Decisao {
   indices: number[];
-  acao: "ligar" | "criar" | "inbox";
+  acao: "ligar" | "criar" | "inbox" | "arquivar";
   oportunidade_id: number | null;
   titulo: string;
   persona_id: number | null;
@@ -77,11 +77,12 @@ export const triador: Agente = {
   id: "triador",
   nome: "Triador",
   descricao:
-    "Transforma insumo bruto (daily do CS, transcrição, thread) em sinais atômicos com citação literal verificada, e propõe o destino de cada um contra a árvore: evidência de oportunidade existente, oportunidade nova (nascendo com evidência) ou inbox.",
+    "Transforma insumo bruto (daily do CS, transcrição, thread) em sinais atômicos com citação literal verificada, e propõe o destino de cada um contra a árvore. Sem alvo, roda no modo inbox: tria os sinais já registrados que estão parados.",
   passoDoLoop: 3,
+  classeModelo: "mini",
   async executar(ctx: ContextoAgente): Promise<Proposta[]> {
     const { db, produtoId, alvoId, gerar } = ctx;
-    if (!alvoId) throw new Error("triador precisa de um insumo alvo");
+    if (!alvoId) return triarInbox(ctx);
 
     const insumo = db
       .prepare("SELECT * FROM insumo WHERE id = ? AND produto_id = ?")
@@ -233,3 +234,156 @@ export const triador: Agente = {
     return propostas;
   },
 };
+
+/** Modo inbox: propõe destino para sinais já registrados e parados na triagem. */
+async function triarInbox(ctx: ContextoAgente): Promise<Proposta[]> {
+  const { db, produtoId, gerar } = ctx;
+
+  const pendentes = db
+    .prepare(
+      "SELECT id, canal, conteudo FROM sinal WHERE produto_id = ? AND status = 'novo' ORDER BY id"
+    )
+    .all(produtoId) as { id: number; canal: string; conteudo: string }[];
+  if (pendentes.length === 0) return [];
+
+  // Não re-triar sinais que já têm sugestão pendente aguardando o PM.
+  const comSugestao = new Set<number>();
+  const abertas = db
+    .prepare("SELECT payload FROM sugestao WHERE produto_id = ? AND estado = 'sugerida' AND tipo = 'triar_sinal'")
+    .all(produtoId) as { payload: string }[];
+  for (const s of abertas) {
+    const ids = (JSON.parse(s.payload) as { sinal_ids?: number[] }).sinal_ids ?? [];
+    for (const id of ids) comSugestao.add(id);
+  }
+  const sinais = pendentes.filter((s) => !comSugestao.has(s.id));
+  if (sinais.length === 0) return [];
+
+  const personas = db
+    .prepare("SELECT id, nome FROM persona WHERE produto_id = ?")
+    .all(produtoId) as { id: number; nome: string }[];
+  const passos = db
+    .prepare(
+      `SELECT pj.id, p.nome AS persona, pj.ordem, pj.titulo FROM passo_jornada pj
+       LEFT JOIN persona p ON p.id = pj.persona_id WHERE pj.produto_id = ?`
+    )
+    .all(produtoId) as Record<string, unknown>[];
+  const arvore = db
+    .prepare(
+      `SELECT o.id, o.titulo, p.nome AS persona, pj.titulo AS passo, o.estado,
+              (SELECT COUNT(*) FROM evidencia e WHERE e.oportunidade_id = o.id) AS evidencias
+       FROM oportunidade o
+       LEFT JOIN persona p ON p.id = o.persona_id
+       LEFT JOIN passo_jornada pj ON pj.id = o.passo_jornada_id
+       WHERE o.produto_id = ? AND o.estado != 'arquivada'`
+    )
+    .all(produtoId) as { id: number; titulo: string }[];
+
+  const SCHEMA: Record<string, unknown> = {
+    type: "object",
+    additionalProperties: false,
+    required: ["decisoes"],
+    properties: {
+      decisoes: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["indices", "acao", "oportunidade_id", "titulo", "persona_id", "passo_jornada_id", "racional"],
+          properties: {
+            indices: { type: "array", items: { type: "integer" } },
+            acao: { type: "string", enum: ["ligar", "criar", "arquivar"] },
+            oportunidade_id: { type: ["integer", "null"] },
+            titulo: { type: "string" },
+            persona_id: { type: ["integer", "null"] },
+            passo_jornada_id: { type: ["integer", "null"] },
+            racional: { type: "string" },
+          },
+        },
+      },
+    },
+  };
+
+  const { saida } = await gerar({
+    sistema: fs.readFileSync(
+      path.join(process.cwd(), "src/lib/agentes/prompts/triador-inbox.md"),
+      "utf-8"
+    ),
+    usuario: JSON.stringify(
+      {
+        sinais: sinais.map((s, i) => ({ indice: i, canal: s.canal, conteudo: s.conteudo })),
+        arvore_de_oportunidades: arvore,
+        personas,
+        passos_da_jornada: passos,
+      },
+      null,
+      2
+    ),
+    nomeSchema: "triagem_do_inbox",
+    schema: SCHEMA,
+  });
+  const decisoes = (saida as { decisoes: Decisao[] }).decisoes;
+
+  const nomePersona = (id: number | null) => personas.find((p) => p.id === id)?.nome ?? null;
+  const tituloPasso = (id: number | null) =>
+    (passos.find((p) => p.id === id) as { titulo?: string } | undefined)?.titulo ?? null;
+
+  const propostas: Proposta[] = [];
+  const usados = new Set<number>();
+  for (const d of decisoes) {
+    const grupo = d.indices.filter((i) => sinais[i] && !usados.has(i));
+    if (grupo.length === 0) continue;
+    grupo.forEach((i) => usados.add(i));
+    const itens = grupo.map((i) => ({ id: sinais[i].id, conteudo: sinais[i].conteudo }));
+    const ids = itens.map((s) => s.id);
+    const insumos = ids.map((id) => ({ tabela: "sinal", registroId: id }));
+
+    if (d.acao === "ligar" && d.oportunidade_id) {
+      const alvo = arvore.find((o) => o.id === d.oportunidade_id);
+      if (!alvo) continue;
+      propostas.push({
+        tipo: "triar_sinal",
+        alvoTabela: "sinal",
+        alvoId: null,
+        payload: {
+          acao: "ligar",
+          sinal_ids: ids,
+          sinais: itens,
+          oportunidade_id: d.oportunidade_id,
+          oportunidade_titulo: alvo.titulo,
+          racional: d.racional,
+        },
+        resumo: `${ids.length} sinal(is) do inbox → evidência de "${alvo.titulo}"`,
+        insumos,
+      });
+    } else if (d.acao === "criar" && d.titulo.trim()) {
+      propostas.push({
+        tipo: "triar_sinal",
+        alvoTabela: "oportunidade",
+        alvoId: null,
+        payload: {
+          acao: "criar",
+          sinal_ids: ids,
+          sinais: itens,
+          titulo: d.titulo,
+          persona_id: d.persona_id,
+          persona_nome: nomePersona(d.persona_id),
+          passo_jornada_id: d.passo_jornada_id,
+          passo_titulo: tituloPasso(d.passo_jornada_id),
+          racional: d.racional,
+        },
+        resumo: `Nova oportunidade do inbox: "${d.titulo}" (${ids.length} evidência(s))`,
+        insumos,
+      });
+    } else if (d.acao === "arquivar") {
+      propostas.push({
+        tipo: "triar_sinal",
+        alvoTabela: "sinal",
+        alvoId: null,
+        payload: { acao: "arquivar", sinal_ids: ids, sinais: itens, racional: d.racional },
+        resumo: `Arquivar ${ids.length} sinal(is) do inbox`,
+        insumos,
+      });
+    }
+  }
+  return propostas;
+}

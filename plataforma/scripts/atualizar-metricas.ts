@@ -6,7 +6,10 @@
  *   cron / launchd             (agendado)
  * O app continua funcionando 100% manual sem este script.
  */
-import { db, hojeLocal } from "../src/lib/db";
+import { carregarEnvLocal } from "../src/lib/env";
+carregarEnvLocal();
+
+import { agora, db, hojeLocal } from "../src/lib/db";
 import { medir } from "../src/lib/fontes";
 
 interface MetricaLinha {
@@ -17,6 +20,45 @@ interface MetricaLinha {
   fonte_nome: string;
   fonte_tipo: string;
   fonte_config: string;
+}
+
+/**
+ * O Vigia (regra, não agente): métrica que se mexeu vira sinal no inbox —
+ * a seta de retorno do loop (passo 10 → 1 → 3). Regra estatística simples:
+ * o valor novo varia ≥ 20% contra a média das 3 medições anteriores.
+ * Proibido atribuir causa: o sinal descreve o movimento; quem hipotetiza é o PM.
+ */
+const LIMIAR_VIGIA = 0.2;
+
+function vigiar(metricaId: number, nome: string): void {
+  const serie = db
+    .prepare("SELECT valor, data FROM metrica_valor WHERE metrica_id = ? ORDER BY data DESC, id DESC LIMIT 4")
+    .all(metricaId) as { valor: number; data: string }[];
+  if (serie.length < 3) return; // sem histórico suficiente
+  const [atual, ...anteriores] = serie;
+  const media = anteriores.reduce((s, v) => s + v.valor, 0) / anteriores.length;
+  if (media === 0) return;
+  const variacao = (atual.valor - media) / Math.abs(media);
+  if (Math.abs(variacao) < LIMIAR_VIGIA) return;
+
+  const metricaRow = db
+    .prepare("SELECT produto_id FROM metrica_negocio WHERE id = ?")
+    .get(metricaId) as { produto_id: number };
+  // Dedupe: um alerta por métrica por semana.
+  const recente = db
+    .prepare(
+      "SELECT id FROM sinal WHERE produto_id = ? AND canal = 'métricas' AND conteudo LIKE ? AND criada_em > datetime('now', '-7 days')"
+    )
+    .get(metricaRow.produto_id, `Métrica "${nome}"%`);
+  if (recente) return;
+
+  const direcao = variacao > 0 ? "subiu" : "caiu";
+  const pct = Math.round(Math.abs(variacao) * 100);
+  const conteudo = `Métrica "${nome}" ${direcao} ${pct}%: ${atual.valor} em ${atual.data} vs média ${Number(media.toFixed(2))} das ${anteriores.length} medições anteriores`;
+  db.prepare(
+    "INSERT INTO sinal (produto_id, canal, conteudo, data, status, criada_em) VALUES (?, 'métricas', ?, ?, 'novo', ?)"
+  ).run(metricaRow.produto_id, conteudo, hojeLocal(), agora());
+  console.log(`  👁 Vigia: ${conteudo} → sinal no inbox`);
 }
 
 async function main(): Promise<number> {
@@ -50,6 +92,7 @@ async function main(): Promise<number> {
         "UPDATE metrica_negocio SET valor_atual = ?, atualizado_em = ? WHERE id = ?"
       ).run(valor, data, m.id);
       console.log(`✓ ${m.nome}: ${valor}  (${detalhe})`);
+      vigiar(m.id, m.nome);
     } catch (e) {
       falhas++;
       console.error(`✗ ${m.nome}: ${e instanceof Error ? e.message : e}`);

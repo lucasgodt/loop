@@ -121,6 +121,43 @@ export function aplicarSugestao(
       case "roteiro_entrevista":
         break;
 
+      // Triador modo inbox: destino para sinais que JÁ existem.
+      case "triar_sinal": {
+        const ids = (p.sinal_ids as number[]) ?? [];
+        if (ids.length === 0) break;
+        const marcar = (status: string) =>
+          ids.forEach((sid) =>
+            db.prepare("UPDATE sinal SET status = ? WHERE id = ?").run(status, sid)
+          );
+        if (p.acao === "ligar") {
+          const oportunidadeId = Number(p.oportunidade_id);
+          const existe = db.prepare("SELECT id FROM oportunidade WHERE id = ?").get(oportunidadeId);
+          if (!existe) throw new Error("a oportunidade alvo não existe mais");
+          for (const sid of ids) ligarEvidencia(oportunidadeId, sid);
+          marcar("promovido");
+        } else if (p.acao === "criar") {
+          const titulo = extras.tituloOverride?.trim() || String(p.titulo);
+          const op = db
+            .prepare(
+              `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, estado, notas, criada_em)
+               VALUES (?, ?, ?, ?, 'identificada', '', ?)`
+            )
+            .run(
+              sugestao.produto_id,
+              titulo,
+              (p.persona_id as number | null) ?? null,
+              (p.passo_jornada_id as number | null) ?? null,
+              agora()
+            );
+          entidadeCriadaId = Number(op.lastInsertRowid);
+          for (const sid of ids) ligarEvidencia(entidadeCriadaId, sid);
+          marcar("promovido");
+        } else if (p.acao === "arquivar") {
+          marcar("arquivado");
+        }
+        break;
+      }
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

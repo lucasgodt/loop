@@ -87,6 +87,18 @@ Para habilitar, crie `.env.local` na raiz da plataforma:
 OPENAI_API_KEY=sk-...
 # opcional (default: gpt-5.1)
 OPENAI_MODEL=gpt-5.1
+# opcional: modelo barato para triagem (Triador); sem isso usa o OPENAI_MODEL
+OPENAI_MODEL_MINI=gpt-5-mini
+```
+
+**Rotina agendada** (a triagem acorda pronta de manhã):
+
+```bash
+npm run agentes    # tria sinais parados no inbox + mede revisões vencidas + digest
+npm run atualizar  # mede métricas com fonte + Vigia (métrica que se mexeu vira sinal)
+# agendar: crontab -e →
+#   0 7 * * *  cd <pasta>/plataforma && npm run atualizar
+#   0 8 * * *  cd <pasta>/plataforma && npm run agentes
 ```
 
 Sem chave, tudo continua funcionando manualmente. Antes de rascunhar fichas com

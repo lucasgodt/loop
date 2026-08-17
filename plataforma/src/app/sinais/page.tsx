@@ -18,11 +18,12 @@ const CANAIS = ["CS", "Daily do CS", "Gravação", "Conversa", "Outro"];
 
 interface SinalDoPayload {
   conteudo: string;
-  trecho_fonte: string;
+  trecho_fonte?: string;
 }
 interface PayloadTriador {
   sinais: SinalDoPayload[];
-  canal: string;
+  canal?: string;
+  acao?: "ligar" | "criar" | "arquivar";
   oportunidade_id?: number;
   oportunidade_titulo?: string;
   titulo?: string;
@@ -42,7 +43,9 @@ export default async function Sinais({
   const sinais = getSinais(produto.id);
   const novos = sinais.filter((s) => s.status === "novo");
   const tratados = sinais.filter((s) => s.status !== "novo");
-  const sugestoes = sugestoesPendentes(produto.id).filter((s) => s.tipo.startsWith("sinal_"));
+  const sugestoes = sugestoesPendentes(produto.id).filter(
+    (s) => s.tipo.startsWith("sinal_") || s.tipo === "triar_sinal"
+  );
 
   return (
     <div>
@@ -94,24 +97,28 @@ export default async function Sinais({
           <ul className="space-y-3">
             {sugestoes.map((sg) => {
               const p = JSON.parse(sg.payload) as PayloadTriador;
-              const ehNova = sg.tipo === "sinal_nova_oportunidade";
+              const ehLigar = sg.tipo === "sinal_evidencia" || p.acao === "ligar";
+              const ehNova = sg.tipo === "sinal_nova_oportunidade" || p.acao === "criar";
+              const ehArquivar = p.acao === "arquivar";
               return (
                 <li key={sg.id} className="card border-accent">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span
                       className={`badge ${
-                        sg.tipo === "sinal_evidencia"
+                        ehLigar
                           ? "bg-accent-soft text-accent"
                           : ehNova
                             ? "bg-warn-soft text-warn"
                             : "bg-line/60 text-muted"
                       }`}
                     >
-                      {sg.tipo === "sinal_evidencia"
+                      {ehLigar
                         ? "ligar como evidência"
                         : ehNova
                           ? "nova oportunidade"
-                          : "para o inbox"}
+                          : ehArquivar
+                            ? "arquivar (ruído)"
+                            : "para o inbox"}
                     </span>
                     <span className="font-mono text-[10px] text-muted">{sg.criada_em.slice(0, 16).replace("T", " ")}</span>
                   </div>
@@ -120,14 +127,16 @@ export default async function Sinais({
                     {p.sinais.map((s, i) => (
                       <li key={i} className="text-sm">
                         {s.conteudo}
-                        <span className="block border-l-2 border-line pl-2 text-xs italic text-muted">
-                          "{s.trecho_fonte}"
-                        </span>
+                        {s.trecho_fonte && (
+                          <span className="block border-l-2 border-line pl-2 text-xs italic text-muted">
+                            "{s.trecho_fonte}"
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
 
-                  {sg.tipo === "sinal_evidencia" && p.oportunidade_id && (
+                  {ehLigar && p.oportunidade_id && (
                     <p className="mt-2 text-sm">
                       →{" "}
                       <Link href={`/oportunidades/${p.oportunidade_id}`} className="font-semibold text-accent hover:underline">

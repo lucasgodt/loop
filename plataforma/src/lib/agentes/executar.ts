@@ -1,5 +1,5 @@
 import { agora, db } from "@/lib/db";
-import { gerar as gerarIA } from "./cliente-ia";
+import { gerar as gerarIA, modeloConfigurado, modeloMini } from "./cliente-ia";
 import { getAgente } from "./index";
 import type { GerarEstruturado } from "./types";
 
@@ -17,11 +17,15 @@ export async function executarAgente(
   const agente = getAgente(agenteId);
 
   const config = db
-    .prepare("SELECT modo FROM agente_config WHERE produto_id = ? AND agente_id = ?")
-    .get(produtoId, agenteId) as { modo: string } | undefined;
+    .prepare("SELECT modo, modelo FROM agente_config WHERE produto_id = ? AND agente_id = ?")
+    .get(produtoId, agenteId) as { modo: string; modelo: string } | undefined;
   if (config?.modo === "desligado") {
     throw new Error(`o agente ${agente.nome} está desligado`);
   }
+
+  // Modelo por agente: override em config > classe do agente > padrão global.
+  const modeloResolvido =
+    config?.modelo || (agente.classeModelo === "mini" ? modeloMini() : modeloConfigurado());
 
   const execucao = db
     .prepare(
@@ -36,7 +40,7 @@ export async function executarAgente(
   let tokensSaida = 0;
   let modeloUsado = "";
   const gerar: GerarEstruturado = async (args) => {
-    const r = await gerarIA(args);
+    const r = await gerarIA({ ...args, modelo: args.modelo ?? modeloResolvido });
     tokensEntrada += r.tokensEntrada;
     tokensSaida += r.tokensSaida;
     modeloUsado = r.modelo;

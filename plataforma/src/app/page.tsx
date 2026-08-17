@@ -65,7 +65,7 @@ export default function Home() {
                   href={
                     s.alvo_tabela === "lancamento" && s.alvo_id
                       ? `/lancamentos/${s.alvo_id}`
-                      : s.tipo.startsWith("sinal_")
+                      : s.tipo.startsWith("sinal_") || s.tipo === "triar_sinal"
                         ? "/sinais"
                         : s.tipo === "roteiro_entrevista"
                           ? "/entrevistas"

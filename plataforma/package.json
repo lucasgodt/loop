@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
-    "atualizar": "tsx scripts/atualizar-metricas.ts"
+    "atualizar": "tsx scripts/atualizar-metricas.ts",
+    "agentes": "tsx scripts/rodar-agentes.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

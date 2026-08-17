@@ -34,6 +34,7 @@ export type GerarEstruturado = (args: {
   usuario: string;
   nomeSchema: string;
   schema: Record<string, unknown>; // JSON Schema da saída (strict)
+  modelo?: string; // override; normalmente resolvido pelo executor
 }) => Promise<{
   saida: unknown;
   modelo: string;
@@ -56,5 +57,11 @@ export interface Agente {
   nome: string;
   descricao: string;
   passoDoLoop: number; // 1..10
+  /**
+   * Classe de modelo: "mini" (triagem/classificação barata — usa
+   * OPENAI_MODEL_MINI se configurado) ou "padrao" (síntese/julgamento).
+   * Override por agente em agente_config.modelo.
+   */
+  classeModelo?: "mini" | "padrao";
   executar(ctx: ContextoAgente): Promise<Proposta[]>;
 }
