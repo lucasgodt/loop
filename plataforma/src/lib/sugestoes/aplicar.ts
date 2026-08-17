@@ -281,6 +281,33 @@ export function aplicarSugestao(
       case "brief_solucao":
         break;
 
+      // Arquiteto: grava o desenho consolidado na solução e cria a ficha de
+      // lançamento ligada a ela (vazia — o Fechador rascunha o conteúdo, e
+      // preencher continua passando pelo aceite humano de sempre).
+      case "desenhar_solucao": {
+        if (!sugestao.alvo_id) throw new Error("sugestão sem solução alvo");
+        const existe = db.prepare("SELECT id FROM solucao WHERE id = ?").get(sugestao.alvo_id);
+        if (!existe) throw new Error("a solução não existe mais");
+        db.prepare("UPDATE solucao SET desenho = ? WHERE id = ?").run(
+          String(p.desenho_md ?? ""),
+          sugestao.alvo_id
+        );
+        const ficha = db
+          .prepare("SELECT id FROM lancamento WHERE solucao_id = ?")
+          .get(sugestao.alvo_id) as { id: number } | undefined;
+        if (ficha) {
+          entidadeCriadaId = ficha.id;
+        } else {
+          const info = db
+            .prepare(
+              "INSERT INTO lancamento (produto_id, solucao_id, nome, criada_em) VALUES (?, ?, ?, ?)"
+            )
+            .run(sugestao.produto_id, sugestao.alvo_id, String(p.nome_lancamento), agora());
+          entidadeCriadaId = Number(info.lastInsertRowid);
+        }
+        break;
+      }
+
       // Conselheiro de métricas: a proposta da conversa vira métrica de
       // negócio — mesmo nome atualiza em vez de duplicar (ajuste conversado).
       case "criar_metrica": {

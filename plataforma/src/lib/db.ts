@@ -333,6 +333,9 @@ const COLUNAS_NOVAS: [tabela: string, ddl: string][] = [
   // mitigação por desenho: a decisão de desenho da solução que elimina o risco
   // sem teste (estado 'mitigada') — vira requisito no brief do Empacotador
   ["suposicao", "mitigacao TEXT NOT NULL DEFAULT ''"],
+  // o desenho consolidado da solução (Arquiteto): só existe quando todo risco
+  // importante tem resposta — teste validado ou mitigação de desenho
+  ["solucao", "desenho TEXT NOT NULL DEFAULT ''"],
 ];
 
 declare global {

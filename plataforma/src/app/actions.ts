@@ -373,10 +373,13 @@ export async function removerEvidencia(fd: FormData) {
 
 export async function atualizarSolucao(fd: FormData) {
   const id = Number(fd.get("id"));
-  db.prepare("UPDATE solucao SET titulo = ?, descricao = ?, link_externo = ? WHERE id = ?").run(
+  db.prepare(
+    "UPDATE solucao SET titulo = ?, descricao = ?, link_externo = ?, desenho = ? WHERE id = ?"
+  ).run(
     texto(fd, "titulo"),
     texto(fd, "descricao"),
     texto(fd, "link_externo"),
+    texto(fd, "desenho"),
     id
   );
   tudoMudou();
@@ -826,6 +829,25 @@ export async function aceitarSugestao(fd: FormData) {
     .get(id) as { tipo: string; estado: string; entidade_criada_id: number | null } | undefined;
   if (aplicada?.tipo === "comparar_solucoes" && aplicada.estado === "aceita" && aplicada.entidade_criada_id) {
     redirect(`/solucoes/${aplicada.entidade_criada_id}`);
+  }
+
+  // Aceitar o desenho do Arquiteto: a ficha de lançamento nasceu ligada à
+  // solução — já dispara o Fechador para rascunhá-la (vira sugestão, como
+  // sempre) e cai na página do lançamento com o rascunho esperando.
+  if (aplicada?.tipo === "desenhar_solucao" && aplicada.estado === "aceita" && aplicada.entidade_criada_id) {
+    const lancamentoId = aplicada.entidade_criada_id;
+    const produtoId = (
+      db.prepare("SELECT produto_id FROM lancamento WHERE id = ?").get(lancamentoId) as {
+        produto_id: number;
+      }
+    ).produto_id;
+    try {
+      const { executarAgente } = await import("@/lib/agentes/executar");
+      await executarAgente("fechador_de_loop", produtoId, "manual", lancamentoId);
+    } catch {
+      /* sem chave ou falha: a página do lançamento tem o botão de rascunhar */
+    }
+    redirect(`/lancamentos/${lancamentoId}`);
   }
 }
 

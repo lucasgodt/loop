@@ -18,6 +18,7 @@ import {
 import { BlocoPr } from "@/app/pr-card";
 import { BotaoAgente, CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
+import { semResposta } from "@/lib/agentes/arquiteto";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import {
   altoRisco,
@@ -69,6 +70,7 @@ export default async function DetalheSolucao({
   const suposicoes = getSuposicoes(s.id);
   const ficha = lancamentoDaSolucao(s.id);
   const arriscadasSemTeste = suposicoes.filter((su) => altoRisco(su) && su.estado === "mapeada");
+  const riscosSemResposta = suposicoes.filter(semResposta);
   const pendentes = sugestoesPendentesParaAlvo("solucao", s.id);
   const volta = `/solucoes/${s.id}`;
 
@@ -134,7 +136,26 @@ export default async function DetalheSolucao({
                 dica="todo o rastro do discovery num documento — incluindo o que NÃO validamos"
               />
             )}
+          {suposicoes.length > 0 &&
+            riscosSemResposta.length === 0 &&
+            !pendentes.some((p) => p.tipo === "desenhar_solucao") && (
+              <BotaoAgente
+                agenteId="arquiteto"
+                produtoId={s.produto_id}
+                alvoId={s.id}
+                volta={volta}
+                rotulo="📐 Desenhar a solução"
+                dica="consolida o desenho a partir das respostas aos riscos e abre a ficha de lançamento — só liberado com todo risco importante respondido"
+              />
+            )}
         </div>
+      )}
+
+      {suposicoes.length > 0 && riscosSemResposta.length > 0 && (
+        <p className="mt-2 text-xs text-muted">
+          📐 O desenho consolidado destrava quando todo risco importante tiver resposta —
+          faltam {riscosSemResposta.length}: teste (com veredito) ou mitigue pelo desenho.
+        </p>
       )}
 
       <div className="mt-3">
@@ -152,6 +173,17 @@ export default async function DetalheSolucao({
             <div className="md:col-span-2">
               <label className="lbl" htmlFor="e-desc">Descrição</label>
               <textarea id="e-desc" name="descricao" rows={2} defaultValue={s.descricao} className="field" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="lbl" htmlFor="e-desenho">Desenho consolidado (markdown)</label>
+              <textarea
+                id="e-desenho"
+                name="desenho"
+                rows={6}
+                defaultValue={s.desenho}
+                className="field font-mono text-xs"
+                placeholder="o Arquiteto preenche a partir das respostas aos riscos — ou escreva o seu"
+              />
             </div>
             <div className="md:col-span-2 flex justify-end">
               <button className="btn-ghost" type="submit">Salvar</button>
@@ -243,6 +275,17 @@ export default async function DetalheSolucao({
               </form>
             </div>
           </section>
+
+          {s.desenho && (
+            <section className="mt-8">
+              <h2 className="lbl">📐 Desenho consolidado</h2>
+              <div className="card">
+                <pre className="max-h-[36rem] overflow-auto font-sans text-sm whitespace-pre-wrap">
+                  {s.desenho}
+                </pre>
+              </div>
+            </section>
+          )}
 
           {suposicoes.some((su) => su.estado === "mitigada") && (
             <section className="mt-8">

@@ -1,5 +1,6 @@
 import { aceitarSugestao, rejeitarSugestao, rodarAgente } from "@/app/actions";
 import { BotaoPendente } from "@/app/botao-pendente";
+import type { PayloadDesenho } from "@/lib/agentes/arquiteto";
 import type { PayloadComparacao } from "@/lib/agentes/comparador";
 import type { PayloadAvaliacao } from "@/lib/agentes/redator-avaliacao";
 import type { PayloadBrief } from "@/lib/agentes/empacotador";
@@ -255,6 +256,28 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
           />
         </Shell>
       );
+
+    case "desenhar_solucao": {
+      const d = p as unknown as PayloadDesenho;
+      return (
+        <Shell titulo="🤖 Desenho consolidado (Arquiteto)" sugestao={sugestao}>
+          <div className="mt-2 rounded-lg bg-accent-soft/40 p-2 text-xs">
+            <span className="font-semibold">Cobertura — todo risco importante tem resposta:</span>
+            <ul className="mt-1 list-inside list-disc">
+              {d.respostas.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+          </div>
+          <pre className="mt-2 max-h-[32rem] overflow-auto rounded-lg bg-line/30 p-3 font-mono text-xs whitespace-pre-wrap select-all">
+            {d.desenho_md}
+          </pre>
+          <Rodape
+            sugestao={sugestao}
+            rotuloAceitar="Aceitar — gravar o desenho e abrir a ficha de lançamento"
+            nota={`cria a ficha "${d.nome_lancamento}" e o Fechador já rascunha a medição`}
+          />
+        </Shell>
+      );
+    }
 
     case "comparar_solucoes": {
       const c = p as unknown as PayloadComparacao;

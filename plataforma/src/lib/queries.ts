@@ -75,6 +75,7 @@ export interface Solucao {
   descricao: string;
   estado: string;
   link_externo: string;
+  desenho: string;
 }
 
 export interface Lancamento {
@@ -206,7 +207,7 @@ export function oportunidadesEmDiscovery(produtoId: number): Oportunidade[] {
 export function getSolucoes(oportunidadeId: number): Solucao[] {
   return db
     .prepare(
-      "SELECT id, oportunidade_id, titulo, descricao, estado, link_externo FROM solucao WHERE oportunidade_id = ? ORDER BY id"
+      "SELECT id, oportunidade_id, titulo, descricao, estado, link_externo, desenho FROM solucao WHERE oportunidade_id = ? ORDER BY id"
     )
     .all(oportunidadeId) as Solucao[];
 }
@@ -372,7 +373,7 @@ export function getSolucao(id: number): SolucaoDetalhe | null {
   return (
     (db
       .prepare(
-        `SELECT s.id, s.oportunidade_id, s.titulo, s.descricao, s.estado, s.link_externo, s.produto_id,
+        `SELECT s.id, s.oportunidade_id, s.titulo, s.descricao, s.estado, s.link_externo, s.desenho, s.produto_id,
                 o.titulo AS oportunidade_titulo,
                 (SELECT COUNT(*) FROM solucao s2 WHERE s2.oportunidade_id = s.oportunidade_id) AS solucoes_irmas
          FROM solucao s LEFT JOIN oportunidade o ON o.id = s.oportunidade_id
