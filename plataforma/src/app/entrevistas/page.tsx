@@ -7,6 +7,7 @@ import {
   rejeitarSugestao,
   sintetizarEntrevista,
 } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import { Apagar, Editar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import {
@@ -85,7 +86,7 @@ export default async function Entrevistas({
                 ))}
               </select>
             </div>
-            <button className="btn" type="submit">Gerar roteiro</button>
+            <BotaoPendente rotulo="Gerar roteiro" rotuloPendente="escrevendo o roteiro… (~15s)" />
           </div>
         </form>
       )}
@@ -210,9 +211,11 @@ export default async function Entrevistas({
               <form action={sintetizarEntrevista} className="mt-2 flex items-center gap-2">
                 <input type="hidden" name="id" value={e.id} />
                 <span className="badge bg-line/60 text-muted">transcrição ✓</span>
-                <button className="btn-ghost py-1 text-xs" type="submit">
-                  🤖 Sintetizar (extrai dores e propõe destinos na árvore)
-                </button>
+                <BotaoPendente
+                  rotulo="🤖 Sintetizar (extrai dores e propõe destinos na árvore)"
+                  rotuloPendente="sintetizando… (lê a transcrição inteira, ~30s)"
+                  className="btn-ghost py-1 text-xs"
+                />
               </form>
             )}
             <div className="mt-3 flex gap-4 border-t border-line pt-2">

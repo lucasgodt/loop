@@ -10,6 +10,7 @@ import {
   registrarRevisao,
   rejeitarSugestao,
 } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import { BlocoPr } from "@/app/pr-card";
 import { Apagar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
@@ -262,9 +263,10 @@ export default async function FichaLancamento({
                     {podeMediar && (
                       <form action={medirRevisao} className="mt-2">
                         <input type="hidden" name="id" value={r.id} />
-                        <button className="btn" type="submit">
-                          Medir agora via {fontePlugada!.nome}
-                        </button>
+                        <BotaoPendente
+                          rotulo={`Medir agora via ${fontePlugada!.nome}`}
+                          rotuloPendente="medindo na fonte…"
+                        />
                       </form>
                     )}
                     <form action={registrarRevisao} className="mt-2 flex flex-wrap items-end gap-2">
@@ -324,9 +326,14 @@ function RascunhoDoAgente({
       <form action={rascunharFicha} className="mt-4">
         <input type="hidden" name="id" value={lancamentoId} />
         <input type="hidden" name="produto_id" value={produtoId} />
-        <button className="btn" type="submit">
-          {prontoParaVeredito ? "🤖 Rascunhar veredito com IA" : "🤖 Rascunhar ficha com IA"}
-        </button>
+        <BotaoPendente
+          rotulo={prontoParaVeredito ? "🤖 Rascunhar veredito com IA" : "🤖 Rascunhar ficha com IA"}
+          rotuloPendente={
+            prontoParaVeredito
+              ? "comparando resultados vs meta… (~20s)"
+              : "rascunhando… (escreve a consulta e testa com dry-run, ~40s)"
+          }
+        />
         <span className="ml-2 text-xs text-muted">
           {prontoParaVeredito
             ? "resultado vs meta vs baseline + confounders — o veredito final é seu"

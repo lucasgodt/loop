@@ -7,6 +7,7 @@ import {
   medirMetrica,
   registrarValorMetrica,
 } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import { Conversa } from "@/app/conversa";
 import { CardSugestao } from "@/app/sugestoes-cards";
 import { Apagar, Editar } from "@/app/ui";
@@ -140,7 +141,10 @@ export default async function Metricas({
               {fontePlugada && m.consulta && (
                 <form action={medirMetrica} className="mt-2">
                   <input type="hidden" name="id" value={m.id} />
-                  <button className="btn" type="submit">Medir agora via {fontePlugada.nome}</button>
+                  <BotaoPendente
+                    rotulo={`Medir agora via ${fontePlugada.nome}`}
+                    rotuloPendente="medindo na fonte…"
+                  />
                 </form>
               )}
               <div className="mt-3 flex gap-4 border-t border-line pt-2">

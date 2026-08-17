@@ -1,4 +1,5 @@
 import { aceitarSugestao, rejeitarSugestao, rodarAgente } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import type { PayloadAvaliacao } from "@/lib/agentes/redator-avaliacao";
 import type { PayloadBrief } from "@/lib/agentes/empacotador";
 import type { Sugestao } from "@/lib/queries";
@@ -30,9 +31,12 @@ export function BotaoAgente({
       <input type="hidden" name="produto_id" value={produtoId} />
       <input type="hidden" name="alvo_id" value={alvoId} />
       <input type="hidden" name="volta" value={volta} />
-      <button className="btn-ghost" type="submit" title={dica}>
-        {rotulo}
-      </button>
+      <BotaoPendente
+        rotulo={rotulo}
+        rotuloPendente="o agente está pensando… (~20s)"
+        className="btn-ghost"
+        title={dica}
+      />
     </form>
   );
 }

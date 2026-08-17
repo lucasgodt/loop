@@ -8,6 +8,7 @@ import {
   processarInsumo,
   rejeitarSugestao,
 } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
 import { Apagar, Editar } from "@/app/ui";
 import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import { getProduto, getSinais, sugestoesPendentes } from "@/lib/queries";
@@ -81,7 +82,10 @@ export default async function Sinais({
               placeholder="Cole aqui o texto bruto…"
             />
             <input type="hidden" name="produto_id" value={produto.id} />
-            <button className="btn" type="submit">Triar</button>
+            <BotaoPendente
+              rotulo="Triar"
+              rotuloPendente="triando… (extrai sinais e compara com a árvore, ~30s)"
+            />
           </div>
         </form>
       ) : (
