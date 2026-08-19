@@ -1,15 +1,20 @@
 # Loop.
 
-**Uma plataforma pessoal de gestão de produto que transforma método em regra de
-software.** O Loop. implementa o ciclo de continuous discovery (na linha de
-Teresa Torres) de ponta a ponta — da métrica de negócio à mensuração de impacto
-— com os portões do método aplicados pelo sistema, agentes de IA que propõem
-(mas nunca decidem) e medição plugada por padrão.
+**Minha plataforma pessoal de gestão de produto — o método de continuous
+discovery transformado em software que eu uso todos os dias.**
 
-É uma ferramenta de PM para PMs: cada produto gerenciado é um workspace, e nada
-do domínio de um produto específico vive no código.
+Construí o Loop. a partir de uma convicção sobre como produto deve ser feito:
+**nenhum lançamento sai sem métrica de sucesso definida antes, e nenhuma
+aposta grande é feita sem evidência**. A indústria inteira conhece o padrão
+contrário — a feature sai, a medição "fica pra depois", o aprendizado nunca
+acontece. A minha resposta foi codificar o processo: aqui, as boas práticas
+não dependem de disciplina; são regra do sistema.
 
-## O loop
+A plataforma implementa o ciclo de continuous discovery (na linha de Teresa
+Torres) de ponta a ponta. Cada produto que gerencio é um workspace — nada do
+domínio de um produto específico vive no código.
+
+## O loop, com portões que o sistema não deixa furar
 
 ```
 1 Métrica de negócio (lagging) → 2 Jornada → 3 Entrevistas + sinais
@@ -18,57 +23,50 @@ do domínio de um produto específico vive no código.
 → 10 Mensuração de impacto → volta ao 1
 ```
 
-O que diferencia a plataforma de um cadastro é que **os portões do método são
-regra de sistema, não disciplina**:
-
-- Oportunidade nasce com evidência — sem evidência, o sistema trata como palpite.
-- Discovery exige avaliação completa nos 4 critérios e vaga no WIP (máx. 2).
-- Suposições só abrem com 3+ soluções na mesa — a primeira ideia raramente é a melhor.
-- Teste só existe com critério numérico falseável definido **antes**.
-- Risco importante exige resposta — teste validado ou mitigação de desenho —
+- **Oportunidade nasce com evidência** — sem evidência, o sistema a trata como palpite.
+- **Discovery exige avaliação comparativa** nos 4 critérios e vaga no WIP (máx. 2).
+- **Suposições só abrem com 3+ soluções na mesa** — a primeira ideia raramente é a melhor.
+- **Teste só existe com critério numérico falseável definido antes** — depois do
+  resultado, qualquer número parece o combinado.
+- **Risco importante exige resposta** (teste validado ou mitigação de desenho)
   antes do desenho consolidado e do desenvolvimento.
-- Nenhuma solução é "lançada" sem ficha de lançamento: hipótese, métrica primária
-  (leading → aponta para a lagging), baseline, meta e guardrails, **antes** de lançar.
-- Todo lançamento tem revisões de 30/60/90 dias e termina em veredito + aprendizado.
+- **Nenhuma solução é "lançada" sem ficha de medição**: hipótese, métrica primária
+  (leading → aponta para a lagging), baseline, meta e guardrails — antes de lançar.
+- **Todo lançamento termina em veredito + aprendizado**, com revisões de 30/60/90 dias.
 
-## As três naturezas de IA
+## IA com guardrails — a decisão é sempre humana
 
-Tudo passa pelo mesmo guardrail: **a IA propõe; aceitar é sempre um ato humano**
-— e o aceite aplica pelas mesmas mutações do fluxo manual, então agente não fura
-portão por construção.
+O Loop. usa IA em três naturezas, todas sob o mesmo princípio: **a IA propõe;
+aceitar é um ato humano** — e o aceite aplica pelas mesmas regras do fluxo
+manual, então nenhum agente fura um portão do método.
 
-1. **Agentes** (sugestões estruturadas): Triador (texto bruto → sinais com
-   citação literal verificada → destino na árvore), Redator de Avaliação,
-   Provocador de Ideias, Comparador de Soluções (jornada de valor + risco por
-   passo de cada ideia), Agente de Risco (suposições nas 5 lentes + desenho do
-   teste da mais arriscada), Arquiteto (consolida o desenho a partir das
-   respostas aos riscos — recusa-se enquanto houver risco importante sem
-   resposta), Empacotador (brief de desenvolvimento que carrega o que **não**
-   foi validado), Fechador de Loop (ficha de medição com consulta testada em
-   dry-run e baseline medida; rascunho de veredito com confounders) e Roteirista
-   de entrevistas.
-2. **Conselheiros** (chat que pensa junto): conversas persistentes por passo do
-   loop — métricas, jornada, ideação — com o contexto do workspace injetado.
-   Quando a conversa converge, uma ferramenta preenche o formulário como
-   sugestão.
-3. **Executor** (código): com um repositório plugado, botões "via PR" fazem o
-   trabalho num worktree isolado, em branch própria, e abrem um Pull Request —
-   mergear é decisão humana, no GitHub.
+1. **Agentes** — propostas estruturadas e rastreáveis em cada passo: triagem de
+   feedback bruto em sinais (com citação literal verificada mecanicamente),
+   rascunho de avaliação de priorização, comparação de soluções por jornada de
+   valor × risco por passo, mapa de suposições + desenho de teste, consolidação
+   do desenho da solução (que se recusa a rodar enquanto houver risco importante
+   sem resposta), brief de desenvolvimento que carrega explicitamente **o que
+   não foi validado**, e ficha de medição com consulta testada em dry-run.
+2. **Conselheiros** — chats por passo do loop que pensam junto (métrica, jornada,
+   ideação), com o contexto do workspace injetado; quando a conversa converge,
+   preenchem o formulário como proposta.
+3. **Executor** — com um repositório plugado, botões "via PR" implementam
+   instrumentação ou features num worktree isolado e abrem um Pull Request;
+   mergear é decisão humana.
 
-Sem chave de IA configurada, tudo funciona manualmente — os agentes apenas
-explicam o que falta.
+Sem chave de IA, tudo funciona manualmente — a plataforma degrada com elegância.
 
-## Medição plugada
+## Decisões de design de que me orgulho
 
-Fontes de dados são provedores plugáveis (contrato de 1 arquivo): PostHog
-(HogQL) como padrão, comando de shell e HTTP/JSON como válvulas de escape.
-Métricas e revisões guardam *qual fonte* e *qual consulta* — e se medem sozinhas
-via runner agendável (`npm run atualizar`), com uma regra de vigia para desvios.
-
-## Stack
-
-Next.js (App Router, server actions) · SQLite (better-sqlite3) · OpenAI
-(structured outputs, adapter único) · zero JS de cliente além do essencial.
+- **Portões como código, não como checklist**: o funil bloqueia atalhos por
+  construção — é o processo defendendo a si mesmo.
+- **Sugestão rastreável**: toda proposta de IA vira um registro auditável
+  (aceita/rejeitada/motivo), com custo por execução medido.
+- **Anti-alucinação estrutural**: sinal sem trecho-fonte literal não grava;
+  SQL proposto roda em dry-run visível antes de qualquer aceite; avaliação sem
+  insumo diz "sem insumo" em vez de inventar nota.
+- **Medição plugável**: fontes de dados são provedores de 1 arquivo (PostHog
+  como padrão); métricas e revisões se medem sozinhas por runner agendado.
 
 ## Rodar
 
@@ -79,8 +77,7 @@ npm run seed        # cria o workspace inicial
 npm run dev
 ```
 
-Agendáveis: `npm run atualizar` (mede métricas + vigia) e `npm run agentes`
-(triagem do inbox, revisões vencidas, rascunhos de veredito).
+Stack: Next.js (App Router) · SQLite · OpenAI (structured outputs, adapter único).
 
 ## Estrutura
 
@@ -88,5 +85,5 @@ Agendáveis: `npm run atualizar` (mede métricas + vigia) e `npm run agentes`
 ├── plataforma.md    ← especificação: cada passo do loop traduzido em feature
 ├── agentes.md       ← o plano da camada de IA (princípios, elenco, guardrails)
 ├── plataforma/      ← a plataforma ("Loop.")
-└── lancamentos/     ← fichas de lançamento em markdown (semente do módulo de mensuração)
+└── lancamentos/     ← fichas de lançamento em markdown
 ```
