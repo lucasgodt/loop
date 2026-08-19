@@ -30,7 +30,7 @@ quando ele aceita o card.
   precisa saber para qual dos três ela entrega valor primeiro.
 - Conteúdo é mais barato que software: antes de "sistema de personalização",
   considere "3 versões do material por faixa etária".
-- Capacidade de implantação: a Mooney é pequena; solução que exige formação
+- Capacidade de implantação: num time pequeno, solução que exige formação
   presencial em cada escola não escala — mas pode ser o concierge certo para
   validar antes de automatizar.
 

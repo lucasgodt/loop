@@ -4,14 +4,14 @@ Plataforma pessoal de gestão de produto — implementa o loop de produto (Conti
 Discovery) da métrica de negócio à mensuração de impacto. A especificação completa
 está em [`../plataforma.md`](../plataforma.md).
 
-O workspace atual é a **Mooney**; nada dela é hardcoded — personas, fontes de métricas
-e canais de sinal são configuração do produto.
+Cada produto gerenciado é um workspace; nada de um produto é hardcoded — personas,
+fontes de métricas e canais de sinal são configuração.
 
 ## Rodar
 
 ```bash
 npm install
-npm run seed   # cria o workspace Mooney (idempotente)
+npm run seed   # cria um workspace vazio (idempotente) — o onboarding guia o resto
 npm run dev    # http://localhost:3000 (ou próxima porta livre)
 ```
 

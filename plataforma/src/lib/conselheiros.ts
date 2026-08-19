@@ -64,7 +64,7 @@ const LISTA: Conselheiro[] = [
     topico: "metricas",
     rotulo: "Conselheiro de métricas",
     convite:
-      "Pense comigo: qual dessas métricas merece ser a lagging nº 1? O contexto da Mooney já está na conversa — pergunte, discorde, peça o contra-argumento.",
+      "Pense comigo: qual dessas métricas merece ser a lagging nº 1? O contexto do produto já está na conversa — pergunte, discorde, peça o contra-argumento.",
     arquivoPrompt: "conselheiro-metricas.md",
     contexto(produtoId) {
       return {
@@ -124,7 +124,7 @@ const LISTA: Conselheiro[] = [
     topico: "jornada",
     rotulo: "Conselheiro de jornada",
     convite:
-      "Pense comigo a jornada de uma persona por vez: o que ela faz, na ordem, para extrair valor da Mooney? As entrevistas e sinais já estão na conversa — o que não veio da escuta é hipótese, e tudo bem, desde que a gente saiba.",
+      "Pense comigo a jornada de uma persona por vez: o que ela faz, na ordem, para extrair valor do produto? As entrevistas e sinais já estão na conversa — o que não veio da escuta é hipótese, e tudo bem, desde que a gente saiba.",
     arquivoPrompt: "conselheiro-jornada.md",
     contexto(produtoId) {
       return {

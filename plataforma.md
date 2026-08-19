@@ -4,11 +4,10 @@
 > trabalho de um gerente de produto — da métrica de negócio à mensuração de impacto,
 > fechando o ciclo.
 >
-> **A plataforma é minha (Lucas), como gerente de produto — não é uma ferramenta
-> interna da Mooney.** A Mooney é o primeiro produto gerenciado dentro dela: por
-> enquanto só existem features da Mooney na plataforma, mas nada da Mooney é
-> hardcoded. Tudo que é específico (BigQuery, personas, canais de sinal) é
-> **conteúdo/configuração de um workspace**, não estrutura da plataforma.
+> **A plataforma é do PM, não de uma empresa.** Cada produto gerenciado é um
+> workspace, e nada do domínio de um produto específico é hardcoded. Tudo que é
+> específico (warehouse, personas, canais de sinal) é **conteúdo/configuração de
+> um workspace**, não estrutura da plataforma.
 
 ## A ideia central
 
@@ -18,9 +17,9 @@ desenvolvimento de produto**:
 
 - O loop do Miro é o "sistema operacional" da plataforma — cada passo do board vira
   uma feature.
-- A entidade raiz é o **Produto** (workspace). A Mooney é o primeiro; os três
-  lançamentos dela (OLITEF, rework do app, IA do professor) entram como registros
-  retroativos dentro do workspace Mooney.
+- A entidade raiz é o **Produto** (workspace). Lançamentos já feitos entram como
+  registros retroativos — a dívida de medição fica visível e é paga dentro da
+  plataforma.
 - O painel de métricas de sucesso é **uma feature** da plataforma, não um projeto à
   parte.
 - Primeiro construímos a plataforma; depois definimos e capturamos as métricas de
@@ -70,12 +69,12 @@ Antes dos passos do loop, a estrutura que os contém.
 sinal. Todo o resto da plataforma (jornadas, métricas, oportunidades, soluções,
 lançamentos) pertence a um produto.
 
-O workspace **Mooney** configura:
+Um workspace de exemplo (um produto B2B2C escolar) configuraria:
 
 - **Personas**: aluno, professor, escola/gestor.
-- **Fonte de métricas**: BigQuery (`mooney-db39f`).
-- **Canais de sinal**: interações do CS, gravações de conversas, gravação da daily
-  do CS.
+- **Fonte de métricas**: o warehouse SQL do produto.
+- **Canais de sinal**: interações do CS, gravações de conversas, a daily do
+  suporte.
 
 Amanhã, um segundo produto entra com personas, fontes e canais próprios — sem mudar
 uma linha da plataforma. Esse é o teste de que nada ficou hardcoded.
@@ -91,7 +90,7 @@ produto existe para mover uma métrica de negócio.
 
 **Na plataforma.** Entidade `MétricaDeNegócio` (por produto): nome, definição em uma
 frase, **fonte** (query SQL num warehouse, número inserido manualmente, API — a fonte
-é configurável por produto; na Mooney, queries no BigQuery), valor atual, meta,
+é configurável por produto), valor atual, meta,
 histórico. Uma lista curada e curta (3–5 por produto) — se tudo é métrica de negócio,
 nada é.
 
@@ -117,8 +116,8 @@ ser iterada até ser bem mapeada* e *o mapeamento vai sempre evoluir*.
 
 **Na plataforma.** Entidades `Jornada` (uma por persona do produto) e `PassoDaJornada`
 (ordenados, com descrição). A jornada é o **esqueleto estrutural** do workspace: é
-nela que a árvore de oportunidades se pendura. Na Mooney: uma jornada do aluno, uma
-do professor, uma da escola.
+nela que a árvore de oportunidades se pendura. Ex.: num produto escolar, uma
+jornada do aluno, uma do professor, uma da escola.
 
 **Como guia.** Cada oportunidade nasce ancorada num passo da jornada — isso força o
 mapeamento a evoluir (se uma dor não cabe em nenhum passo, a jornada está incompleta e
@@ -132,8 +131,8 @@ Evolução: versões da jornada com histórico de mudanças.
 
 **O que é no board.** No mínimo **uma entrevista por semana**, no formato
 *story-based* (pedir histórias específicas vividas, não opiniões). Em paralelo,
-fontes contínuas de sinal — no caso da Mooney: interações de clientes com o CS,
-gravações, gravação da daily do CS.
+fontes contínuas de sinal — ex.: interações de clientes com o CS, gravações,
+a daily do suporte.
 
 **Na plataforma.** Duas entidades:
 
@@ -298,7 +297,7 @@ na fonte do produto, revisões 30/60/90, resultado, veredito, aprendizado.
 
 **Como guia.**
 
-1. **Agenda de revisões**: a home mostra as revisões vencidas ("OLITEF: revisão de 30
+1. **Agenda de revisões**: a home mostra as revisões vencidas ("revisão de 30
    dias atrasada há 12 dias"). No dia, a plataforma roda a query (ou pede o número) e
    registra o valor contra a meta.
 2. **Veredito obrigatório**: um lançamento sem veredito é um lançamento que não
@@ -316,7 +315,7 @@ cobrança. Evolução: painel automático alimentado pela fonte de dados do prod
 ## Modelo de objetos (visão geral)
 
 ```
-Produto (workspace — Mooney é o primeiro)
+Produto (workspace)
  ├─ personas · fontes de métricas · canais de sinal   (configuração)
  │
  ├─ MétricaDeNegócio ◄────────────────────────────────┐
@@ -334,7 +333,7 @@ Produto (workspace — Mooney é o primeiro)
 ```
 
 Cada entidade nasce de um passo do board — não há entidade que não corresponda a um
-passo do loop, e nenhuma carrega nada específico da Mooney.
+passo do loop, e nenhuma carrega nada específico de um produto.
 
 ## A home: "o que fazer agora"
 
@@ -344,23 +343,17 @@ O coração da plataforma como **guia** é uma única tela de estado por produto
 - 📥 **Sinais não triados: 4**
 - 🌳 **Oportunidade em discovery:** "Professor não sabe usar a IA em aula" — próximo
   passo bloqueante: *faltam 2 soluções (1/3)*
-- 🚀 **Revisões de lançamento atrasadas:** OLITEF (30d, +12 dias) · Rework (60d, +3 dias)
+- 🚀 **Revisões de lançamento atrasadas:** Lançamento A (30d, +12 dias) · Lançamento B (60d, +3 dias)
 - 📊 **Métricas de negócio** com tendência
 
 Se eu abrir a plataforma e em 10 segundos souber o que fazer, ela cumpriu o papel.
 Com mais de um produto no futuro, a home agrega as pendências de todos.
 
-## Posicionamento dos 3 projetos da Mooney
+## Lançamentos retroativos: a dívida visível
 
-Os três entram no workspace Mooney como **`Solução` no estado "lançada" com
-`Lançamento` retroativo** (as fichas de `lancamentos/` são a semente), cada um com uma
-oportunidade-mãe a reconstruir:
-
-| Projeto | Oportunidade-mãe (a reconstruir) | Estado do lançamento |
-|---|---|---|
-| OLITEF | Ex.: "escolas precisam de um evento que mobilize os alunos" | Sem métrica definida — ficha rascunhada |
-| Rework do app | Ex.: "alunos abandonam o app por experiência confusa" | Sem baseline — precisa da data de corte |
-| IA do professor | Ex.: "professor não se sente seguro para dar aula de ed. financeira" | Sem instrumentação — uso não é logado |
+Lançamentos que saíram antes da plataforma entram como **`Solução` "lançada" com
+`Lançamento` retroativo**, cada um com a oportunidade-mãe a reconstruir e as
+pendências explícitas (sem métrica definida, sem baseline, sem instrumentação).
 
 A plataforma **nasce mostrando essa dívida** no painel — e o primeiro uso real dela é
 pagá-la: definir a métrica de cada um, capturar baseline e agendar as revisões. É o
@@ -373,16 +366,15 @@ Uma feature do módulo de mensuração, não um projeto à parte:
 - Lista de lançamentos com **métrica primária vs. meta** e curva no tempo.
 - Status das revisões (em dia / atrasada / concluída) e vereditos.
 - Métricas de negócio no topo, ligando lançamentos ao que importa.
-- Fonte: a fonte de dados configurada no produto — na Mooney, queries BigQuery
-  (`mooney-db39f`), na fase 1 rodadas por script Python; depois, automáticas.
+- Fonte: a fonte de dados configurada no produto.
 
 ## Ordem de construção
 
-**Fase 1 — o mínimo que já guia** (resolve a dor declarada):
-workspace Mooney configurado · métricas de negócio · registro de entrevistas com
+**Fase 1 — o mínimo que já guia**:
+workspace configurado · métricas de negócio · registro de entrevistas com
 streak · inbox de sinais · árvore de oportunidades simples (lista indentada) ·
 lançamentos com agenda de revisão e cobrança · a home "o que fazer agora". *Ao fim da
-fase 1: definir e capturar as métricas de OLITEF, rework e IA do professor dentro da
+fase 1: definir e capturar as métricas dos lançamentos retroativos dentro da
 plataforma.*
 
 **Fase 2 — o funil completo:** priorização com os 4 critérios e limite de WIP ·
@@ -429,20 +421,15 @@ loop rodando em ~15 minutos. Checklist auto-detectado na home + manual em /guia
 - **Educação embutida**: cada item carrega 1–2 frases do método explicando por que
   essa ordem importa (lagging → escuta → árvore → medição).
 - **Por produto**: um segundo workspace no futuro passa pelo mesmo onboarding —
-  é também o teste de que nada da Mooney ficou hardcoded.
+  é também o teste de que nada de um produto ficou hardcoded.
 - **Evolução**: "configurar conversando" — um agente de onboarding que entrevista o
   PM sobre o produto e preenche workspace/personas/jornada como sugestões.
 
 ## Decisões em aberto
 
-1. **Forma da plataforma**: app web (Next.js + banco próprio) ou, numa fase 0, dados
-   estruturados + scripts que geram a home e o painel? Como é uma plataforma pessoal
-   (não da Mooney), o repositório dela provavelmente merece vida própria fora deste
-   repo de scripts da Mooney. Recomendação: validar o processo com o mais barato que
-   cobra cadência de verdade; web app quando o processo provar que gruda.
-2. **Colaboradores por workspace**: o CS da Mooney registra sinais direto na
-   plataforma, ou eu trio a daily e registro? (Muda o desenho do inbox e a
+1. **Colaboradores por workspace**: o time de CS registra sinais direto na
+   plataforma, ou o PM tria o bruto e registra? (Muda o desenho do inbox e a
    necessidade de login/permissões.)
-3. **Qual é a métrica de negócio nº 1 da Mooney hoje?** O workspace começa por ela.
-4. **Instrumentação da IA do professor**: o uso é logado em algum lugar? Se não,
-   é pré-requisito de qualquer medição.
+2. **Instrumentação como pré-requisito**: lançamento cujo uso não é logado em
+   lugar nenhum não tem como ser medido — instrumentar vem antes de qualquer
+   ficha.

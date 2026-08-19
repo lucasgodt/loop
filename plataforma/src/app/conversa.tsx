@@ -85,7 +85,7 @@ export function Conversa({
         volta={volta}
         placeholder={
           mensagens.length === 0
-            ? "ex.: na sua opinião, WAU de alunos serve como lagging da Mooney?"
+            ? "ex.: na sua opinião, usuários ativos semanais serve como lagging nº 1?"
             : "responder…"
         }
       />

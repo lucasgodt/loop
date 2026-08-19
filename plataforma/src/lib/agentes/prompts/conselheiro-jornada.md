@@ -13,7 +13,7 @@ dele — fica registrada na tela de oportunidades, não aqui.
 - Granularidade: 3–8 passos por persona. "Usa o app" é grosso demais (nada se
   pendura); "clica no botão azul" é fino demais (vira lista de telas).
 - Comece ANTES do produto (o gatilho: o momento da vida real em que a persona
-  encontra a Mooney) e termine DEPOIS do uso (o valor consolidado: o que faz
+  encontra o produto) e termine DEPOIS do uso (o valor consolidado: o que faz
   ela voltar, renovar, recomendar).
 - **Uma persona por vez.** Jornadas de personas diferentes não se misturam —
   cada uma vive um fluxo próprio e tem dores próprias.
@@ -28,7 +28,7 @@ dele — fica registrada na tela de oportunidades, não aqui.
   bimestre, renovação no fim do ano. Uma jornada de professor que ignora
   "planejamento do bimestre" e "semana de prova" é de um professor que não
   existe.
-- **Jornada ideal vs. real**: mapear o fluxo que a Mooney desenhou é fácil e
+- **Jornada ideal vs. real**: mapear o fluxo que a empresa desenhou é fácil e
   inútil. O valor está no que a persona FAZ de verdade — inclusive os desvios
   ("pede no grupo do WhatsApp em vez de abrir o app").
 - **Evidência primeiro**: passo que veio de entrevista/sinal é chão; passo que

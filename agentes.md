@@ -40,7 +40,7 @@
 
 ## Provedor de IA: OpenAI (decisão)
 
-O provedor inicial é a **API da OpenAI** — decisão do Lucas. A arquitetura não muda
+O provedor inicial é a **API da OpenAI** — decisão de projeto. A arquitetura não muda
 por isso, porque o app nunca conhece o provedor:
 
 - **Um único arquivo** (`src/lib/agentes/cliente-ia.ts`) implementa o contrato
@@ -49,7 +49,7 @@ por isso, porque o app nunca conhece o provedor:
   arquivo; nenhum agente muda.
 - **Modelo por classe de tarefa**, configurável por agente sem deploy: um **modelo
   mini** para triagem/classificação (barato, roda todo dia) e o **modelo topo de
-  linha** para síntese, SQL e textos que o Lucas assina embaixo (avaliação, veredito,
+  linha** para síntese, SQL e textos que o PM assina embaixo (avaliação, veredito,
   aprendizado). Conferir os nomes vigentes da OpenAI ao implementar e deixá-los em
   config, nunca hardcoded.
 - A chave (`OPENAI_API_KEY`) vive em `.env.local`, lida só pelo cliente-ia e pelo
@@ -67,14 +67,14 @@ solo. O corte final: **4 agentes de registro + 3 botões + 1 regra**.
 | Agente | Passos | O que faz | Aplicação default |
 |---|---|---|---|
 | **Triador** | 3 → 4 | Recebe insumo bruto (daily do CS colada, transcrição de entrevista, thread) e produz: sinais atômicos com citação literal → **diff tipado da árvore** (ligar como evidência de oportunidade existente · criar oportunidade nova na voz do cliente, já nascendo com a evidência · arquivar como ruído). Deduplica contra a árvore inteira ("prefira ligar a existente"). Internamente em **dois passos** (padrão Vistaly): snapshot por insumo, depois diff contra a árvore — nunca um mega-prompt. | Rascunho. Ligações de evidência podem ir a automático depois que a taxa de aprovação provar; **criar oportunidade nunca é automático**. |
-| **Redator de Avaliação** | 5 | Rascunha as notas 1–5 dos 4 critérios com justificativa citando evidência real ("7 evidências, 5 escolas distintas; a irmã mais próxima tem 2") e grau de confiança por critério ("mercado: sem insumo — valide"). Justificativa aparece **antes** da nota. Nunca escreve o campo decisão. | Sempre rascunho — preenche o formulário; salvar é sempre do Lucas. Auto-preencher a avaliação furaria o portão do discovery na prática. |
+| **Redator de Avaliação** | 5 | Rascunha as notas 1–5 dos 4 critérios com justificativa citando evidência real ("7 evidências, 5 escolas distintas; a irmã mais próxima tem 2") e grau de confiança por critério ("mercado: sem insumo — valide"). Justificativa aparece **antes** da nota. Nunca escreve o campo decisão. | Sempre rascunho — preenche o formulário; salvar é sempre do PM. Auto-preencher a avaliação furaria o portão do discovery na prática. |
 | **Agente de Risco** | 7 + 8 | Percorre o story map perguntando "o que precisa ser verdade? como pode dar errado?" e gera suposições nas 5 lentes com posição sugerida na matriz (regra dura: sem evidência ligada no banco, evidência ≤ 2; máx. 7 por rodada, 2 por lente). Para a mais arriscada, desenha o teste: método mais barato adequado à lente + **critério numérico falseável antes** ("X de Y em Z dias") + roteiro (script de entrevista dirigida ou SQL de dado histórico). Critério sem número é descartado antes de gravar. | Rascunho. Sub-caso automático permitido: teste por dados históricos com fonte plugada — roda a consulta e preenche o resultado; o **veredito é sempre humano**. |
-| **Fechador de Loop** | 10 | O mais valioso. (a) Rascunha a ficha: hipótese no formato padrão, métrica primária (leading→lagging), meta, guardrails — e **escreve o SQL na fonte plugada** (BigQuery na Mooney), testa com dry-run e mede a baseline na janela pré-lançamento com número real. (b) No dia da revisão 30/60/90: mede pela infra de fontes existente e rascunha a nota comparativa. (c) No fechamento: rascunha veredito + aprendizado, obrigado a listar confounders conhecidos (sazonalidade escolar!). | Por sub-tarefa: medição no dia = automático (já é o padrão do `atualizar`); ficha = rascunho; **veredito/aprendizado = sempre rascunho, sem opção automático** — o momento de aprendizado do PM é o ponto do loop inteiro. |
+| **Fechador de Loop** | 10 | O mais valioso. (a) Rascunha a ficha: hipótese no formato padrão, métrica primária (leading→lagging), meta, guardrails — e **escreve o SQL na fonte plugada** do produto, testa com dry-run e mede a baseline na janela pré-lançamento com número real. (b) No dia da revisão 30/60/90: mede pela infra de fontes existente e rascunha a nota comparativa. (c) No fechamento: rascunha veredito + aprendizado, obrigado a listar confounders conhecidos (sazonalidade escolar!). | Por sub-tarefa: medição no dia = automático (já é o padrão do `atualizar`); ficha = rascunho; **veredito/aprendizado = sempre rascunho, sem opção automático** — o momento de aprendizado do PM é o ponto do loop inteiro. |
 
 ### Botões (sob demanda, sem dial, sem cron)
 
 - **Roteiro de entrevista** (passo 3): dado persona + oportunidade em discovery, gera
-  o roteiro story-based ("me conta a última vez que...") para o Lucas conduzir a call.
+  o roteiro story-based ("me conta a última vez que...") para o PM conduzir a call.
   É a fase 1 do Entrevistador — ver seção própria abaixo.
 - **Brief para o Linear** (passo 9): quando a solução passa o portão de entrada
   (riscos testados), compila a trilha de discovery num PRD — problema com citações
@@ -84,7 +84,7 @@ solo. O corte final: **4 agentes de registro + 3 botões + 1 regra**.
 - **Pesquisa de concorrência** (passo 6): busca na web como concorrentes abordam a
   oportunidade — COMO e POR QUÊ, com link de fonte em cada afirmação; sem fonte,
   rotulado "hipótese a verificar". Candidatas de solução só são ofertadas quando já
-  existe ≥1 solução do próprio Lucas (o agente destrava a 3ª ideia, não substitui a
+  existe ≥1 solução do próprio PM (o agente destrava a 3ª ideia, não substitui a
   ideação) e **não contam para o portão 3/3 até aprovadas**.
 
 ### Regra no `atualizar` (nem é agente)
@@ -110,37 +110,37 @@ solo. O corte final: **4 agentes de registro + 3 botões + 1 regra**.
 1. **"Preparar entrevista"**: botão que gera o roteiro story-based personalizado
    (persona + oportunidade investigada + método fixo da Teresa Torres: abrir ancorado
    em história, montar a cena, linha do tempo, redirecionar generalização para o
-   concreto). Lucas conduz a call ao vivo (Meet/Zoom com transcrição automática).
+   concreto). O PM conduz a call ao vivo (Meet/Zoom com transcrição automática).
 2. **"Colar transcrição"**: nova coluna `transcricao` na entrevista; colar dispara o
    Triador, que sintetiza com citações e sugere evidências/candidatas. Reduzir o
-   atrito de cada entrevista que o Lucas JÁ faz é o que sustenta o streak — não um
+   atrito de cada entrevista que o PM JÁ faz é o que sustenta o streak — não um
    robô entrevistando.
 
 ### Fase 2 — link público (só com gatilho observável)
 
 Construir **apenas se** a fila de professores sem agenda para call se materializar
 por 3+ semanas seguidas. É o componente mais caro do sistema (deploy, banco na nuvem,
-custo por token, LGPD, risco relacional com escolas clientes). O desenho, quando
+custo por token, LGPD, risco relacional com clientes). O desenho, quando
 chegar a hora:
 
 - App próprio (repo separado, deploy Vercel), rota pública `/e/[token]` — chat
   mobile-first, sem login, token de uso único com expiração e teto de ~20 turnos.
-- **Tela de consentimento antes de tudo**: quem conduz (uma IA em nome do Lucas /
-  Mooney), o que é gravado, para quê, botão "prefiro não continuar" que descarta.
+- **Tela de consentimento antes de tudo**: quem conduz (uma IA em nome do PM /
+  da empresa), o que é gravado, para quê, botão "prefiro não continuar" que descarta.
   Sem disclosure a qualidade do dado cai (participantes retêm informação) — é
   requisito, não polimento.
 - Banco próprio mínimo na nuvem (convite + mensagens); a plataforma local **puxa**
   transcrições concluídas no `npm run atualizar` e apaga da nuvem (minimização).
-  O app público nunca alcança a máquina do Lucas.
+  O app público nunca alcança a máquina do PM.
 - **Pressure-test obrigatório**: "testar como participante" antes de gerar o link.
 - **Regras fixas**: persona de menores de idade não é elegível para link de IA (o
   agente se recusa a gerar); entrevista por agente conta em contador próprio e **não
   fecha o streak 1/1 humano** — a cadência da Teresa Torres existe para o PM ouvir
   gente; o agente é escala e follow-up, não substituto.
 - O que a pesquisa diz esperar: conclusão de 30–45% (vs 5–15% de survey), saltando
-  quando o convite chega por canal já existente — na Mooney, **WhatsApp do CS com a
+  quando o convite chega por canal já existente — ex.: **o canal do CS com a
   escola**, nunca e-mail frio. Riqueza comparável à humana em cenários estruturados;
-  fraca em subtexto emocional e exploração profunda — que continuam sendo do Lucas.
+  fraca em subtexto emocional e exploração profunda — que continuam sendo do PM.
 
 ## Arquitetura técnica
 
@@ -175,7 +175,7 @@ src/lib/agentes/
 - Colunas novas via o padrão `COLUNAS_NOVAS` já existente: `entrevista.transcricao`,
   `entrevista.conduzida_por`, `oportunidade.analise_concorrencia`,
   `produto.contexto` (JSON com o contexto de schema do warehouse — o conteúdo da
-  skill de dados da Mooney vira **configuração do workspace**, nunca hardcode),
+  o conhecimento de dados do produto vira **configuração do workspace**, nunca hardcode),
   flag de menor de idade na persona.
 
 ### O aplicador (a garantia estrutural)
@@ -209,9 +209,9 @@ das entidades.
   **Aceitar** · **Editar** (abre o formulário manual existente pré-preenchido —
   literalmente o mesmo formulário) · **Rejeitar** (motivo opcional).
 - Entidades nascidas de sugestão exibem selo discreto "criada por agente em <data>"
-  linkando a sugestão; quando o Lucas edita/aprova, isso fica registrado — o estado
+  linkando a sugestão; quando o PM edita/aprova, isso fica registrado — o estado
   de maior confiança é "IA + humano" (padrão Dovetail).
-- A home continua cobrando o **Lucas** pelas pendências — o agente age em nome dele,
+- A home continua cobrando o **PM** pelas pendências — o agente age em nome dele,
   nunca é "dono" de nada (padrão Linear).
 
 ## O risco nº 1 do sistema
@@ -225,7 +225,7 @@ em camadas, como regra de sistema desde a fase 1:
 2. Baseline sempre acompanhada da janela usada.
 3. Variação anômala vs revisão anterior marcada para olho humano antes de qualquer
    rascunho de veredito.
-4. O rascunho de veredito é obrigado a listar confounders do workspace (na Mooney:
+4. O rascunho de veredito é obrigado a listar confounders do workspace (ex.:
    férias escolares em julho/dezembro mudam tudo).
 5. Veredito é sempre humano. Sempre.
 
@@ -282,16 +282,16 @@ conselheiro novo = 1 entrada no registro + 1 prompt + o card na página do passo
 
 Construídos: **metricas** (passo 1 — opinião sobre a lagging nº 1, armadilhas
 B2B2C escolar; ferramenta propor_metrica com upsert por nome). Planejados sob
-demanda do Lucas, um por passo do loop.
+demanda, um por passo do loop.
 
 ## Ordem de construção (alívio de carga ÷ esforço)
 
 | Fase | O quê | Por quê primeiro |
 |---|---|---|
 | 0 (~1 dia) | Infra mínima: contrato + `cliente-ia.ts` (OpenAI) + tabelas `sugestao`/`agente_config` + prompts | Base de tudo; sem UI nova além do inbox |
-| 1 (~2-3 dias) | **Fechador de Loop — "Rascunhar ficha"** | Ataca a dívida declarada no primeiro uso: hipótese + métrica + SQL BigQuery com dry-run + baseline para OLITEF, rework e IA do professor. Nenhum outro agente remove tanto trabalho parado |
-| 2 (~3-4 dias) | **Triador** (colar a daily do CS → sinais → diff da árvore), modo rascunho | Maior alívio recorrente (diário); resolve a decisão em aberto "CS registra ou Lucas tria?" por um terceiro caminho: o CS só entrega o bruto |
-| 3 (~2-3 dias) | Cadência de entrevistas pela via barata: roteiro + `transcricao` + síntese | Baixa o custo de cada entrevista que o Lucas já faz |
+| 1 (~2-3 dias) | **Fechador de Loop — "Rascunhar ficha"** | Ataca a dívida declarada no primeiro uso: hipótese + métrica + SQL BigQuery com dry-run + baseline para os lançamentos retroativos. Nenhum outro agente remove tanto trabalho parado |
+| 2 (~3-4 dias) | **Triador** (colar a daily do CS → sinais → diff da árvore), modo rascunho | Maior alívio recorrente (diário); resolve a decisão em aberto "o CS registra ou o PM tria?" por um terceiro caminho: o CS só entrega o bruto |
+| 3 (~2-3 dias) | Cadência de entrevistas pela via barata: roteiro + `transcricao` + síntese | Baixa o custo de cada entrevista que o PM já faz |
 | 4 (~1-2 dias) | `npm run agentes` + cron + regra do Vigia no atualizar | Só aqui considerar girar dials para automático, começando pelas ações aditivas/reversíveis |
 | 5 ✓ | Botões sob demanda: Redator de Avaliação, Provocador de Ideias, Agente de Risco, brief do Empacotador + veredito rascunhado pelo Fechador | Com WIP de 2, priorização/ideação acontecem poucas vezes ao mês. (Pesquisa de concorrência com web ficou para depois — exige outra infra de busca) |
 | 6 ✓ | Agente executor: repositórios plugados + executores de código plugáveis + PRs via gh | Pedido do PM antes do onboarding; PR é o formato natural de sugestão para código |
@@ -307,5 +307,5 @@ demanda do Lucas, um por passo do loop.
 3. **Quando promover um dial a automático**: o critério proposto é taxa de aprovação
    sem edição (ex.: 19/20) — medir manualmente no começo, automatizar a régua depois.
 4. **Contexto de schema do warehouse** (`produto.contexto`): semear do conteúdo da
-   skill de dados da Mooney — decidir o formato (tabelas, joins, regras de higiene,
+   o contexto de dados do produto — decidir o formato (tabelas, joins, regras de higiene,
    confounders sazonais).

@@ -34,7 +34,7 @@ export default function Home() {
       <div className="card mt-20 text-center">
         <h1 className="display text-2xl">Nenhum workspace ainda.</h1>
         <p className="mt-2 text-sm text-muted">
-          Rode <code className="font-mono">npm run seed</code> para criar o workspace Mooney.
+          Rode <code className="font-mono">npm run seed</code> para criar o seu workspace.
         </p>
       </div>
     );
@@ -131,7 +131,7 @@ export default function Home() {
           <p className="mt-2 flex-1 text-sm text-muted">
             {sinais > 0
               ? "Sinais esperando triagem: promova a oportunidade ou arquive."
-              : "Inbox limpo. Capture o que ouvir do CS e das escolas."}
+              : "Inbox limpo. Capture o que ouvir do CS e dos clientes."}
           </p>
           <Link href="/sinais" className="btn-ghost mt-4 self-start">
             {sinais > 0 ? "Triar sinais" : "Capturar sinal"}

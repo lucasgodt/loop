@@ -134,7 +134,7 @@ export default async function Fontes({
         </div>
         <div>
           <label className="lbl" htmlFor="nome">Nome</label>
-          <input id="nome" name="nome" required className="field" placeholder="ex.: BigQuery Mooney" />
+          <input id="nome" name="nome" required className="field" placeholder="ex.: BigQuery produção" />
         </div>
         <div>
           <label className="lbl" htmlFor="tipo">Tipo</label>
@@ -173,7 +173,7 @@ export default async function Fontes({
         <p className="mt-3 text-xs text-muted">
           <strong>O padrão é o PostHog</strong>: métricas de produto viram eventos
           capturados lá, e o plano de instrumentação faz parte da ficha de cada
-          lançamento. As outras fontes são válvula de escape — o BigQuery da Mooney
+          lançamento. As outras fontes são válvula de escape — um warehouse SQL
           pluga pelo tipo <strong>comando</strong> (via{" "}
           <code className="font-mono">bq query</code>) e serve principalmente para
           baselines históricas de antes da instrumentação.
@@ -238,7 +238,7 @@ export default async function Fontes({
           </div>
           <div>
             <label className="lbl" htmlFor="r-nome">Nome</label>
-            <input id="r-nome" name="nome" required className="field" placeholder="ex.: app Mooney" />
+            <input id="r-nome" name="nome" required className="field" placeholder="ex.: app principal" />
           </div>
           <div>
             <label className="lbl" htmlFor="r-branch">Branch base</label>
@@ -261,7 +261,7 @@ export default async function Fontes({
               name="caminho_local"
               required
               className="field font-mono text-xs"
-              placeholder="/Users/você/projetos/app-mooney"
+              placeholder="/Users/você/projetos/meu-app"
             />
           </div>
           <div className="md:col-span-3">
@@ -296,7 +296,7 @@ export default async function Fontes({
             defaultValue={produto.contexto}
             className="field font-mono text-xs"
             placeholder={
-              "ex.:\nDataset: mooney-db39f.analytics\n- tabela alunos (aluno_id, escola_id, criado_em)\n- tabela sessoes (aluno_id, iniciada_em, ...)\nJoins: sessoes.aluno_id = alunos.aluno_id\nRegras: excluir escolas de teste (escola_id IN (...))\nConfounders: férias escolares em julho e dezembro/janeiro"
+              "ex.:\nDataset: meu-projeto.analytics\n- tabela alunos (aluno_id, escola_id, criado_em)\n- tabela sessoes (aluno_id, iniciada_em, ...)\nJoins: sessoes.aluno_id = alunos.aluno_id\nRegras: excluir escolas de teste (escola_id IN (...))\nConfounders: férias escolares em julho e dezembro/janeiro"
             }
           />
           <div className="mt-2 flex justify-end">

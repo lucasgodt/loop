@@ -84,6 +84,5 @@ Stack: Next.js (App Router) · SQLite · OpenAI (structured outputs, adapter ún
 ```
 ├── plataforma.md    ← especificação: cada passo do loop traduzido em feature
 ├── agentes.md       ← o plano da camada de IA (princípios, elenco, guardrails)
-├── plataforma/      ← a plataforma ("Loop.")
-└── lancamentos/     ← fichas de lançamento em markdown
+└── plataforma/      ← a plataforma ("Loop.")
 ```
