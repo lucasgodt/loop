@@ -274,6 +274,16 @@ CREATE TABLE IF NOT EXISTS mensagem_conversa (
   criada_em TEXT NOT NULL
 );
 
+-- Série temporal da métrica primária de um lançamento (acompanhamento
+-- contínuo, além das revisões pontuais de 30/60/90). Um valor por dia.
+CREATE TABLE IF NOT EXISTS lancamento_valor (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lancamento_id INTEGER NOT NULL REFERENCES lancamento(id),
+  valor REAL NOT NULL,
+  data TEXT NOT NULL,
+  UNIQUE (lancamento_id, data)
+);
+
 -- Onde vive o código do produto. O agente executor trabalha SEMPRE num
 -- worktree isolado a partir da branch_base — nunca no checkout do dono,
 -- nunca com push na branch principal. instrucoes = convenções fixas do repo.

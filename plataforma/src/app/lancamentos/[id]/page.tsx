@@ -5,11 +5,13 @@ import {
   apagarRevisao,
   atualizarLancamento,
   gerarRevisoes,
+  medirLancamento,
   medirRevisao,
   rascunharFicha,
   registrarRevisao,
   rejeitarSugestao,
 } from "@/app/actions";
+import { Sparkline } from "@/app/sparkline";
 import { BotaoPendente } from "@/app/botao-pendente";
 import { BlocoPr } from "@/app/pr-card";
 import { Apagar } from "@/app/ui";
@@ -19,6 +21,7 @@ import { sugestaoPendentePara } from "@/lib/queries";
 import {
   diasDeAtraso,
   getFontes,
+  getHistoricoLancamento,
   getLancamento,
   getMetricas,
   getProduto,
@@ -227,6 +230,13 @@ export default async function FichaLancamento({
         </div>
       </form>
 
+      {podeMediar && !lancamento.veredito && (
+        <section className="mt-8">
+          <h2 className="lbl">Acompanhamento — {lancamento.metrica_primaria || "métrica primária"}</h2>
+          <AcompanhamentoDaMetrica lancamentoId={lancamento.id} fonteNome={fontePlugada!.nome} />
+        </section>
+      )}
+
       <section className="mt-8">
         <h2 className="lbl">Revisões</h2>
         {revisoes.length === 0 ? (
@@ -308,6 +318,56 @@ export default async function FichaLancamento({
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/** A série contínua da métrica primária — o gráfico que as revisões pontuam. */
+function AcompanhamentoDaMetrica({
+  lancamentoId,
+  fonteNome,
+}: {
+  lancamentoId: number;
+  fonteNome: string;
+}) {
+  const historico = getHistoricoLancamento(lancamentoId);
+  const ultimo = historico.at(-1);
+  return (
+    <div className="card">
+      {historico.length === 0 ? (
+        <p className="mb-3 text-sm text-muted">
+          Nenhuma medição na série ainda. O <code className="font-mono text-xs">npm run atualizar</code>{" "}
+          (cron das 7h) mede todo dia enquanto o lançamento não tem veredito — ou meça agora.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="font-mono text-5xl tabular-nums">{ultimo!.valor}</span>
+            <span className="ml-2 font-mono text-xs text-muted">em {ultimo!.data}</span>
+            <div className="mt-2">
+              <Sparkline valores={historico.map((h) => h.valor)} />
+            </div>
+          </div>
+          <ul className="max-h-40 space-y-0.5 overflow-y-auto">
+            {[...historico].reverse().slice(0, 30).map((h) => (
+              <li key={h.id} className="font-mono text-xs text-muted">
+                {h.data} · {h.valor}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <form action={medirLancamento} className="mt-3 border-t border-line pt-3">
+        <input type="hidden" name="id" value={lancamentoId} />
+        <BotaoPendente
+          rotulo={`Medir agora via ${fonteNome}`}
+          rotuloPendente="medindo na fonte…"
+          className="btn-ghost"
+        />
+        <span className="ml-2 text-xs text-muted">
+          grava o valor de hoje na série (1 por dia; medir de novo sobrescreve)
+        </span>
+      </form>
     </div>
   );
 }

@@ -99,6 +99,31 @@ async function main(): Promise<number> {
     }
   }
 
+  // Série de acompanhamento dos lançamentos em medição: a métrica primária de
+  // cada lançamento sem veredito, com fonte plugada, ganha o valor do dia.
+  const emMedicao = db
+    .prepare(
+      `SELECT l.id, l.nome, l.consulta, l.fonte_dados_id FROM lancamento l
+       WHERE l.veredito IS NULL AND l.fonte_dados_id IS NOT NULL AND l.consulta != ''`
+    )
+    .all() as { id: number; nome: string; consulta: string; fonte_dados_id: number }[];
+  for (const l of emMedicao) {
+    const fonte = db
+      .prepare("SELECT tipo, config FROM fonte_dados WHERE id = ?")
+      .get(l.fonte_dados_id) as { tipo: string; config: string } | undefined;
+    if (!fonte) continue;
+    try {
+      const m = await medir(fonte, l.consulta);
+      db.prepare(
+        "INSERT INTO lancamento_valor (lancamento_id, valor, data) VALUES (?, ?, ?) ON CONFLICT(lancamento_id, data) DO UPDATE SET valor = excluded.valor"
+      ).run(l.id, m.valor, hojeLocal());
+      console.log(`✓ Lançamento "${l.nome}": ${m.valor} (série de acompanhamento)`);
+    } catch (e) {
+      falhas++;
+      console.error(`✗ Lançamento "${l.nome}": ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
   // Digest de pendências — o "o que fazer agora" na versão terminal.
   const atrasadas = db
     .prepare(

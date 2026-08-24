@@ -222,6 +222,17 @@ export function getLancamento(id: number): Lancamento | null {
   return (db.prepare("SELECT * FROM lancamento WHERE id = ?").get(id) as Lancamento) ?? null;
 }
 
+/** A série da métrica primária do lançamento (acompanhamento contínuo). */
+export function getHistoricoLancamento(
+  lancamentoId: number
+): { id: number; valor: number; data: string }[] {
+  return db
+    .prepare(
+      "SELECT id, valor, data FROM lancamento_valor WHERE lancamento_id = ? ORDER BY data, id"
+    )
+    .all(lancamentoId) as { id: number; valor: number; data: string }[];
+}
+
 export function getRevisoes(lancamentoId: number): Revisao[] {
   return db
     .prepare("SELECT * FROM revisao WHERE lancamento_id = ? ORDER BY data_prevista")

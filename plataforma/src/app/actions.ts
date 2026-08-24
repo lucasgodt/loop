@@ -1271,6 +1271,30 @@ export async function medirMetrica(fd: FormData) {
   tudoMudou();
 }
 
+/** Mede a métrica primária do lançamento e grava na série de acompanhamento. */
+export async function medirLancamento(fd: FormData) {
+  const id = Number(fd.get("id"));
+  const lancamento = db
+    .prepare("SELECT fonte_dados_id, consulta FROM lancamento WHERE id = ?")
+    .get(id) as { fonte_dados_id: number | null; consulta: string } | undefined;
+  const fonte = lancamento?.fonte_dados_id ? getFonte(lancamento.fonte_dados_id) : null;
+  if (!lancamento || !fonte || !lancamento.consulta) return;
+
+  let valor: number;
+  try {
+    valor = (await medir(fonte, lancamento.consulta)).valor;
+  } catch (e) {
+    redirect(
+      `/lancamentos/${id}?erro=` + encodeURIComponent(e instanceof Error ? e.message : String(e))
+    );
+  }
+  db.prepare(
+    "INSERT INTO lancamento_valor (lancamento_id, valor, data) VALUES (?, ?, ?) ON CONFLICT(lancamento_id, data) DO UPDATE SET valor = excluded.valor"
+  ).run(id, valor, hojeLocal());
+  tudoMudou();
+  revalidatePath(`/lancamentos/${id}`);
+}
+
 /** Executa a fonte plugada do lançamento e registra a revisão com o valor medido. */
 export async function medirRevisao(fd: FormData) {
   const id = Number(fd.get("id"));
