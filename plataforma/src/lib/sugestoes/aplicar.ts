@@ -94,16 +94,20 @@ export function aplicarSugestao(
       case "sinal_nova_oportunidade": {
         const titulo = extras.tituloOverride?.trim() || String(p.titulo);
         const ids = criarSinais(p.sinais as SinalProposto[], String(p.canal), "promovido");
+        const paiOk = p.pai_id
+          ? db.prepare("SELECT id FROM oportunidade WHERE id = ?").get(Number(p.pai_id))
+          : undefined;
         const op = db
           .prepare(
-            `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, estado, notas, criada_em)
-             VALUES (?, ?, ?, ?, 'identificada', '', ?)`
+            `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, pai_id, estado, notas, criada_em)
+             VALUES (?, ?, ?, ?, ?, 'identificada', '', ?)`
           )
           .run(
             sugestao.produto_id,
             titulo,
             (p.persona_id as number | null) ?? null,
             (p.passo_jornada_id as number | null) ?? null,
+            paiOk ? Number(p.pai_id) : null,
             agora()
           );
         entidadeCriadaId = Number(op.lastInsertRowid);
@@ -137,16 +141,20 @@ export function aplicarSugestao(
           marcar("promovido");
         } else if (p.acao === "criar") {
           const titulo = extras.tituloOverride?.trim() || String(p.titulo);
+          const paiOk = p.pai_id
+            ? db.prepare("SELECT id FROM oportunidade WHERE id = ?").get(Number(p.pai_id))
+            : undefined;
           const op = db
             .prepare(
-              `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, estado, notas, criada_em)
-               VALUES (?, ?, ?, ?, 'identificada', '', ?)`
+              `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, pai_id, estado, notas, criada_em)
+               VALUES (?, ?, ?, ?, ?, 'identificada', '', ?)`
             )
             .run(
               sugestao.produto_id,
               titulo,
               (p.persona_id as number | null) ?? null,
               (p.passo_jornada_id as number | null) ?? null,
+              paiOk ? Number(p.pai_id) : null,
               agora()
             );
           entidadeCriadaId = Number(op.lastInsertRowid);

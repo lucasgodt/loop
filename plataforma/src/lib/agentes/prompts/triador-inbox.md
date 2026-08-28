@@ -20,3 +20,14 @@ Regras duras:
 - Racional de 1 frase por decisão, citando o porquê.
 
 Responda somente no schema, referenciando os sinais pelos índices fornecidos.
+
+## Hierarquia da árvore (pai_id)
+
+Ao CRIAR uma oportunidade nova, pergunte-se: ela é uma sub-dor específica de uma
+oportunidade que JÁ existe na árvore? Se sim, preencha `pai_id` com o id da mãe —
+a árvore ganha profundidade e as dependências ficam visíveis (ex.: "preciso
+justificar a compra para o financeiro" é filha de uma dor mais ampla de decisão
+de compra, se ela existir). Se a nova dor é ampla e independente, `pai_id` =
+null (raiz). Nunca invente id: use apenas ids presentes na árvore fornecida.
+Uma filha herda o contexto da mãe — não repita persona/passo se divergirem da
+realidade do sinal.

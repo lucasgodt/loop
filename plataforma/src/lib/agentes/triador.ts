@@ -12,6 +12,7 @@ interface Decisao {
   indices: number[];
   acao: "ligar" | "criar" | "inbox" | "arquivar";
   oportunidade_id: number | null;
+  pai_id: number | null;
   titulo: string;
   persona_id: number | null;
   passo_jornada_id: number | null;
@@ -49,11 +50,12 @@ const SCHEMA_DECISOES: Record<string, unknown> = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["indices", "acao", "oportunidade_id", "titulo", "persona_id", "passo_jornada_id", "racional"],
+        required: ["indices", "acao", "oportunidade_id", "pai_id", "titulo", "persona_id", "passo_jornada_id", "racional"],
         properties: {
           indices: { type: "array", items: { type: "integer" } },
           acao: { type: "string", enum: ["ligar", "criar", "inbox"] },
           oportunidade_id: { type: ["integer", "null"] },
+          pai_id: { type: ["integer", "null"], description: "se a NOVA oportunidade é sub-dor de uma existente, o id da mãe" },
           titulo: { type: "string" },
           persona_id: { type: ["integer", "null"] },
           passo_jornada_id: { type: ["integer", "null"] },
@@ -186,6 +188,7 @@ export const triador: Agente = {
           insumos: [{ tabela: "insumo", registroId: alvoId }],
         });
       } else if (d.acao === "criar" && d.titulo.trim()) {
+        const mae = d.pai_id ? arvore.find((o) => o.id === d.pai_id) : undefined;
         propostas.push({
           tipo: "sinal_nova_oportunidade",
           alvoTabela: "oportunidade",
@@ -194,13 +197,15 @@ export const triador: Agente = {
             sinais: grupo,
             canal: insumo.canal,
             titulo: d.titulo,
+            pai_id: mae?.id ?? null,
+            pai_titulo: mae?.titulo ?? null,
             persona_id: d.persona_id,
             persona_nome: nomePersona(d.persona_id),
             passo_jornada_id: d.passo_jornada_id,
             passo_titulo: tituloPasso(d.passo_jornada_id),
             racional: d.racional,
           },
-          resumo: `Nova oportunidade: "${d.titulo}" (${grupo.length} evidência(s))`,
+          resumo: `Nova oportunidade: "${d.titulo}"${mae ? ` — filha de "${mae.titulo.slice(0, 40)}"` : ""} (${grupo.length} evidência(s))`,
           insumos: [{ tabela: "insumo", registroId: alvoId }],
         });
       } else {
@@ -288,11 +293,12 @@ async function triarInbox(ctx: ContextoAgente): Promise<Proposta[]> {
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["indices", "acao", "oportunidade_id", "titulo", "persona_id", "passo_jornada_id", "racional"],
+          required: ["indices", "acao", "oportunidade_id", "pai_id", "titulo", "persona_id", "passo_jornada_id", "racional"],
           properties: {
             indices: { type: "array", items: { type: "integer" } },
             acao: { type: "string", enum: ["ligar", "criar", "arquivar"] },
             oportunidade_id: { type: ["integer", "null"] },
+            pai_id: { type: ["integer", "null"], description: "se a NOVA oportunidade é sub-dor de uma existente, o id da mãe" },
             titulo: { type: "string" },
             persona_id: { type: ["integer", "null"] },
             passo_jornada_id: { type: ["integer", "null"] },
@@ -356,6 +362,7 @@ async function triarInbox(ctx: ContextoAgente): Promise<Proposta[]> {
         insumos,
       });
     } else if (d.acao === "criar" && d.titulo.trim()) {
+      const mae = d.pai_id ? arvore.find((o) => o.id === d.pai_id) : undefined;
       propostas.push({
         tipo: "triar_sinal",
         alvoTabela: "oportunidade",
@@ -365,13 +372,15 @@ async function triarInbox(ctx: ContextoAgente): Promise<Proposta[]> {
           sinal_ids: ids,
           sinais: itens,
           titulo: d.titulo,
+          pai_id: mae?.id ?? null,
+          pai_titulo: mae?.titulo ?? null,
           persona_id: d.persona_id,
           persona_nome: nomePersona(d.persona_id),
           passo_jornada_id: d.passo_jornada_id,
           passo_titulo: tituloPasso(d.passo_jornada_id),
           racional: d.racional,
         },
-        resumo: `Nova oportunidade do inbox: "${d.titulo}" (${ids.length} evidência(s))`,
+        resumo: `Nova oportunidade do inbox: "${d.titulo}"${mae ? ` — filha de "${mae.titulo.slice(0, 40)}"` : ""} (${ids.length} evidência(s))`,
         insumos,
       });
     } else if (d.acao === "arquivar") {
