@@ -432,6 +432,64 @@ export function aplicarSugestao(
         break;
       }
 
+      // Organizador da Árvore: aplica as operações de estrutura em transação —
+      // mãe nova herda persona/passo e 1 evidência da filha mais evidenciada
+      // (agrupador não nasce "palpite"); ciclos são re-validados aqui.
+      case "organizar_arvore": {
+        const passoId = Number(p.passo_id);
+        const personaId = (p.persona_id as number | null) ?? null;
+        const existeOp = (id: number) =>
+          db.prepare("SELECT id, pai_id FROM oportunidade WHERE id = ?").get(id) as
+            | { id: number; pai_id: number | null }
+            | undefined;
+        const descende = (candidata: number, de: number): boolean => {
+          let atual: number | null | undefined = candidata;
+          for (let i = 0; i < 20 && atual; i++) {
+            if (atual === de) return true;
+            atual = existeOp(atual)?.pai_id;
+          }
+          return false;
+        };
+        for (const m of (p.maes_novas ?? []) as { titulo: string; filhas_ids: number[] }[]) {
+          const filhas = m.filhas_ids.filter((f) => existeOp(f));
+          if (filhas.length < 2) continue;
+          const mae = db
+            .prepare(
+              `INSERT INTO oportunidade (produto_id, titulo, persona_id, passo_jornada_id, estado, notas, criada_em)
+               VALUES (?, ?, ?, ?, 'identificada', 'Agrupadora criada pelo Organizador da Árvore.', ?)`
+            )
+            .run(sugestao.produto_id, m.titulo, personaId, passoId, agora());
+          const maeId = Number(mae.lastInsertRowid);
+          for (const f of filhas) {
+            db.prepare("UPDATE oportunidade SET pai_id = ? WHERE id = ?").run(maeId, f);
+          }
+          const evidencia = db
+            .prepare(
+              `SELECT e.sinal_id, e.entrevista_id FROM evidencia e
+               WHERE e.oportunidade_id IN (${filhas.join(",")}) ORDER BY e.id LIMIT 1`
+            )
+            .get() as { sinal_id: number | null; entrevista_id: number | null } | undefined;
+          if (evidencia) {
+            db.prepare(
+              "INSERT INTO evidencia (oportunidade_id, sinal_id, entrevista_id, criada_em) VALUES (?, ?, ?, ?)"
+            ).run(maeId, evidencia.sinal_id, evidencia.entrevista_id, agora());
+          }
+        }
+        for (const a of (p.aninhamentos ?? []) as { filha_id: number; mae_id: number }[]) {
+          if (!existeOp(a.filha_id) || !existeOp(a.mae_id)) continue;
+          if (a.filha_id === a.mae_id || descende(a.mae_id, a.filha_id)) continue;
+          db.prepare("UPDATE oportunidade SET pai_id = ? WHERE id = ?").run(a.mae_id, a.filha_id);
+        }
+        for (const a of (p.ancoragens ?? []) as { oportunidade_id: number }[]) {
+          if (!existeOp(a.oportunidade_id)) continue;
+          db.prepare("UPDATE oportunidade SET passo_jornada_id = ? WHERE id = ?").run(
+            passoId,
+            a.oportunidade_id
+          );
+        }
+        break;
+      }
+
       default:
         throw new Error(`tipo de sugestão desconhecido: ${sugestao.tipo}`);
     }

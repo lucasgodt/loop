@@ -3,6 +3,7 @@ import { arquiteto } from "./arquiteto";
 import { comparador } from "./comparador";
 import { empacotador } from "./empacotador";
 import { fechadorDeLoop } from "./fechador-de-loop";
+import { organizador } from "./organizador";
 import { provocador } from "./provocador";
 import { redatorAvaliacao } from "./redator-avaliacao";
 import { roteirista } from "./roteirista";
@@ -23,6 +24,7 @@ const LISTA: Agente[] = [
   redatorAvaliacao,
   provocador,
   comparador,
+  organizador,
   agenteDeRisco,
   arquiteto,
   empacotador,

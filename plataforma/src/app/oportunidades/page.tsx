@@ -181,6 +181,7 @@ export default async function Oportunidades({
             oportunidades={oportunidades}
             passos={passos}
             personas={personas}
+            produtoId={produto.id}
           />
           <p className="mt-2 text-xs text-muted">
             Clique num nó para abrir a oportunidade (avaliar, mover, ideação). Oportunidades
@@ -254,6 +255,9 @@ export default async function Oportunidades({
         <Conversa produtoId={produto.id} topico="jornada" volta="/oportunidades" />
 
         {sugestoesPendentesDoTipo(produto.id, "criar_jornada").map((s) => (
+          <CardSugestao key={s.id} sugestao={s} />
+        ))}
+        {sugestoesPendentesDoTipo(produto.id, "organizar_arvore").map((s) => (
           <CardSugestao key={s.id} sugestao={s} />
         ))}
       </section>

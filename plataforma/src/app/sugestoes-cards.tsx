@@ -355,6 +355,50 @@ export function CardSugestao({ sugestao }: { sugestao: Sugestao }) {
       );
     }
 
+    case "organizar_arvore": {
+      const o = p as unknown as {
+        passo_titulo: string;
+        maes_novas: { titulo: string; filhas_ids: number[]; racional: string }[];
+        aninhamentos: { filha_id: number; mae_id: number; racional: string }[];
+        ancoragens: { oportunidade_id: number; titulo?: string; racional: string }[];
+        resumo: string;
+      };
+      return (
+        <Shell titulo={`🌳 Reorganização proposta — "${o.passo_titulo}"`} sugestao={sugestao}>
+          {o.resumo && <p className="mt-2 text-sm text-muted">{o.resumo}</p>}
+          <ul className="mt-2 space-y-2">
+            {o.maes_novas.map((m, i) => (
+              <li key={`m${i}`} className="text-sm">
+                <span className="badge mr-2 bg-accent-soft text-accent">mãe nova</span>
+                <span className="font-semibold">&quot;{m.titulo}&quot;</span> agrupando{" "}
+                {m.filhas_ids.length} oportunidades
+                <p className="text-xs text-muted">{m.racional}</p>
+              </li>
+            ))}
+            {o.aninhamentos.map((a, i) => (
+              <li key={`a${i}`} className="text-sm">
+                <span className="badge mr-2 bg-line/60 text-muted">aninhar</span>
+                #{a.filha_id} vira filha de #{a.mae_id}
+                <p className="text-xs text-muted">{a.racional}</p>
+              </li>
+            ))}
+            {o.ancoragens.map((a, i) => (
+              <li key={`c${i}`} className="text-sm">
+                <span className="badge mr-2 bg-warn-soft text-warn">ancorar aqui</span>
+                {a.titulo ?? `#${a.oportunidade_id}`}
+                <p className="text-xs text-muted">{a.racional}</p>
+              </li>
+            ))}
+          </ul>
+          <Rodape
+            sugestao={sugestao}
+            rotuloAceitar="Aceitar — reorganizar"
+            nota="ajuste depois na própria árvore (editar > oportunidade-mãe)"
+          />
+        </Shell>
+      );
+    }
+
     case "criar_jornada": {
       const passos = p.passos as { titulo: string; descricao: string }[];
       return (

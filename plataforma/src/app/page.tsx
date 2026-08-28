@@ -82,7 +82,7 @@ export default function Home() {
                               ? "/entrevistas"
                               : s.tipo === "criar_metrica"
                                 ? "/metricas"
-                                : s.tipo === "criar_jornada"
+                                : s.tipo === "criar_jornada" || s.tipo === "organizar_arvore"
                                   ? "/oportunidades"
                                   : "/"
                   }

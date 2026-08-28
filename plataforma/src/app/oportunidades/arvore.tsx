@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { rodarAgente } from "@/app/actions";
+import { BotaoPendente } from "@/app/botao-pendente";
+import { temChaveDeIA } from "@/lib/agentes/cliente-ia";
 import {
   getSolucoes,
+  sugestoesPendentesParaAlvo,
   type Oportunidade,
   type PassoJornada,
   type Persona,
@@ -61,19 +65,43 @@ function Coluna({
   titulo,
   roots,
   filhos,
+  botaoOrganizar,
 }: {
   ordem: string;
   titulo: string;
   roots: Oportunidade[];
   filhos: Map<number, Oportunidade[]>;
+  botaoOrganizar?: { produtoId: number; passoId: number };
 }) {
+  const podeOrganizar =
+    botaoOrganizar &&
+    roots.length >= 2 &&
+    temChaveDeIA() &&
+    sugestoesPendentesParaAlvo("passo_jornada", botaoOrganizar.passoId).length === 0;
   return (
     <div className="arvore shrink-0">
       <ul>
         <li>
-          <div className="w-40 rounded-full border border-line bg-line/40 px-3 py-1.5 text-center">
+          <div className="relative w-40 rounded-full border border-line bg-line/40 px-3 py-1.5 text-center">
             <span className="eyebrow block text-[9px]">{ordem}</span>
             <span className="block text-xs font-semibold leading-snug">{titulo}</span>
+            {podeOrganizar && (
+              <form
+                action={rodarAgente}
+                className="absolute -top-1.5 -right-1.5"
+                title="repensar a organização das oportunidades deste passo (mães, aninhamentos, órfãs)"
+              >
+                <input type="hidden" name="agente_id" value="organizador" />
+                <input type="hidden" name="produto_id" value={botaoOrganizar.produtoId} />
+                <input type="hidden" name="alvo_id" value={botaoOrganizar.passoId} />
+                <input type="hidden" name="volta" value="/oportunidades" />
+                <BotaoPendente
+                  rotulo="✨"
+                  rotuloPendente="…"
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-line bg-card text-xs shadow-sm hover:border-accent"
+                />
+              </form>
+            )}
           </div>
           {roots.length > 0 && (
             <ul>
@@ -97,10 +125,12 @@ export function ArvoreVisual({
   oportunidades,
   passos,
   personas,
+  produtoId,
 }: {
   oportunidades: Oportunidade[];
   passos: PassoJornada[];
   personas: Persona[];
+  produtoId: number;
 }) {
   const vivas = oportunidades.filter((o) => o.estado !== "arquivada");
   const ids = new Set(vivas.map((o) => o.id));
@@ -158,6 +188,7 @@ export function ArvoreVisual({
                   titulo={p.titulo}
                   roots={roots.filter((o) => o.passo_jornada_id === p.id)}
                   filhos={filhos}
+                  botaoOrganizar={{ produtoId, passoId: p.id }}
                 />
               ))}
               {semAncora.length > 0 && (
