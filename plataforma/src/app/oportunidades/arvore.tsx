@@ -75,7 +75,7 @@ function Coluna({
 }) {
   const podeOrganizar =
     botaoOrganizar &&
-    roots.length >= 2 &&
+    roots.length >= 1 &&
     temChaveDeIA() &&
     sugestoesPendentesParaAlvo("passo_jornada", botaoOrganizar.passoId).length === 0;
   return (
@@ -179,7 +179,7 @@ export function ArvoreVisual({
       {secoes.map(({ banda, passosDaBanda, semAncora }) => (
         <section key={banda.nome}>
           <h2 className="lbl">{banda.nome}</h2>
-          <div className="overflow-x-auto pb-2">
+          <div className="overflow-x-auto pt-2 pb-2">
             <div className="flex items-start gap-6">
               {passosDaBanda.map((p) => (
                 <Coluna

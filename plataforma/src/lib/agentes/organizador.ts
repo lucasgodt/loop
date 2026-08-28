@@ -110,11 +110,6 @@ export const organizador: Agente = {
          FROM oportunidade o WHERE o.produto_id = ? AND o.passo_jornada_id = ? AND o.estado != 'arquivada'`
       )
       .all(produtoId, alvoId) as OpLida[];
-    if (doPasso.length < 2) {
-      throw new Error(
-        `este passo tem ${doPasso.length} oportunidade(s) — organização só faz sentido com 2+`
-      );
-    }
     const orfas = db
       .prepare(
         `SELECT o.id, o.titulo, o.estado, o.pai_id,
@@ -124,6 +119,11 @@ export const organizador: Agente = {
            AND o.estado != 'arquivada'`
       )
       .all(produtoId, passo.persona_id) as OpLida[];
+    if (doPasso.length + orfas.length < 2) {
+      throw new Error(
+        `este passo tem ${doPasso.length} oportunidade(s) e não há órfãs da persona — nada para organizar`
+      );
+    }
 
     const { saida } = await gerar({
       sistema: prompt(),
